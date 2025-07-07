@@ -28,3 +28,4 @@ fn raw_print(str) {
 - [ ] Generator
 - [ ] Support for all arm32 syscalls
 - [ ] stdlib for helper functions
+- [ ] Marry luna
