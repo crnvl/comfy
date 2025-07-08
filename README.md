@@ -20,6 +20,11 @@ fn print(str) {
 fn raw_print(str) {
   write(1, str, str.len);           // syscall write to std out
 }
+
+
+fn raw_open(path) {
+  let fd = open(path, 0, 0);        // syscall open with file descriptor return value
+}
 ```
 
 ## Progress
