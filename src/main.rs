@@ -18,7 +18,7 @@ fn main() {
         }
     };
 
-    let tokens = tokenizer::tokenize(script);
+    let tokens = tokenizer::tokenize(&script);
 
     println!("Tokens: {:?}", tokens);
 }

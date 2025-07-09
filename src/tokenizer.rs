@@ -16,7 +16,7 @@ pub enum Token {
     Unknown,
 }
 
-pub fn tokenize(script: String) -> Vec<Token> {
+pub fn tokenize(script: &str) -> Vec<Token> {
     let mut tokens = Vec::new();
     let mut iter = script.chars().peekable();
 
