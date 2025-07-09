@@ -32,5 +32,6 @@ fn raw_open(path) {
 - [ ] Parser
 - [ ] Generator
 - [ ] Support for all arm32 syscalls
+- [ ] Direct asm support
 - [ ] stdlib for helper functions
 - [ ] Marry luna
