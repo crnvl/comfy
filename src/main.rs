@@ -1,4 +1,7 @@
+use crate::parser::parse;
+
 mod tokenizer;
+mod parser;
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
@@ -19,6 +22,8 @@ fn main() {
     };
 
     let tokens = tokenizer::tokenize(&script);
+    println!("Tokens: {:?}\n", tokens);
 
-    println!("Tokens: {:?}", tokens);
+    let ast_nodes = parse(tokens);
+    println!("AST Nodes: {:?}", ast_nodes);
 }

@@ -1,3 +1,3 @@
 fn main() {
-    write(1, "comfy world!", 12);
+    $write(1, "comfy world!", 12);
 }

@@ -1,10 +1,11 @@
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Token {
     Number(i32),
     String(String),
 
     Function,
     Identifier(String),
+    Syscall(String),
     ParentOpen,
     ParentClose,
     CurlyOpen,
@@ -30,6 +31,18 @@ pub fn tokenize(script: &str) -> Vec<Token> {
             '}' => tokens.push(Token::CurlyClose),
             ',' => tokens.push(Token::Comma),
             ';' => tokens.push(Token::Semicolon),
+
+            '$' => {
+                let mut syscall = String::new();
+                while let Some(&next_ch) = iter.peek() {
+                    if next_ch.is_alphanumeric() || next_ch == '_' {
+                        syscall.push(iter.next().unwrap());
+                    } else {
+                        break;
+                    }
+                }
+                tokens.push(Token::Syscall(syscall));
+            }
 
             '"' => {
                 let mut string = String::new();
