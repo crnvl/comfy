@@ -1,3 +1,5 @@
+use std::path::{Path, PathBuf};
+
 use crate::{generator::generate, parser::parse, tokenizer::tokenize};
 
 mod generator;
@@ -30,8 +32,20 @@ fn main() {
 
     let assembly_code = utils::generate_assembly(generator.rodata, generator.bss, generator.text);
 
-    let output_file = "output.s";
-    match std::fs::write(output_file, assembly_code) {
+    let input_path = Path::new(file_path);
+    let file_stem = input_path.file_stem().unwrap_or_default().to_string_lossy();
+    let build_dir = Path::new("./build");
+    if !build_dir.exists() {
+        if let Err(e) = std::fs::create_dir_all(build_dir) {
+            eprintln!("Error creating build directory: {}", e);
+            std::process::exit(1);
+        }
+    }
+
+    let output_file = build_dir.join(format!("{}.s", file_stem));
+    let output_file = output_file.to_string_lossy().to_string();
+
+    match std::fs::write(&output_file, assembly_code) {
         Ok(_) => println!("Assembly code written to {}", output_file),
         Err(e) => {
             eprintln!("Error writing to file {}: {}", output_file, e);
