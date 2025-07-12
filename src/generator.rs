@@ -1,5 +1,11 @@
 use crate::{parser::AstNode, utils::generate_str_varname};
 
+pub fn generate(ast: &AstNode) -> Generator {
+    let mut generator = Generator::new();
+    generator.generate(ast);
+    generator
+}
+
 pub struct Generator {
     pub rodata: Vec<String>,
     pub bss: Vec<String>,
@@ -7,7 +13,7 @@ pub struct Generator {
 }
 
 impl Generator {
-    pub fn new() -> Self {
+    fn new() -> Self {
         let mut self_data = Self {
             rodata: Vec::new(),
             bss: Vec::new(),
@@ -19,7 +25,7 @@ impl Generator {
         self_data
     }
 
-    pub fn generate(&mut self, ast: &AstNode) {
+    fn generate(&mut self, ast: &AstNode) {
         match ast {
             AstNode::Program(statements) => {
                 for statement in statements.iter() {
