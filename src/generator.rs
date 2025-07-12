@@ -34,7 +34,6 @@ impl Generator {
 
                     for param in params.iter() {
                         if let AstNode::Identifier(param_name, size) = param {
-                            println!("Adding parameter {} with size {}", param_name, size);
                             self.bss
                                 .push(format!(".lcomm {}_{}, {}", name, param_name, size));
                         } else {
