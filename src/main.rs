@@ -1,4 +1,4 @@
-use crate::{generator::Generator, parser::parse};
+use crate::{generator::generate, parser::parse, tokenizer::tokenize};
 
 mod generator;
 mod parser;
@@ -24,16 +24,12 @@ fn main() {
         }
     };
 
-    let tokens = tokenizer::tokenize(&script);
-
+    let tokens = tokenize(&script);
     let ast_nodes = parse(tokens);
-
-    let mut generator = Generator::new();
-    generator.generate(&ast_nodes);
+    let generator = generate(&ast_nodes);
 
     let assembly_code = utils::generate_assembly(generator.rodata, generator.bss, generator.text);
 
-    // write to file
     let output_file = "output.s";
     match std::fs::write(output_file, assembly_code) {
         Ok(_) => println!("Assembly code written to {}", output_file),
