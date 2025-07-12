@@ -35,11 +35,9 @@ fn main() {
     let input_path = Path::new(file_path);
     let file_stem = input_path.file_stem().unwrap_or_default().to_string_lossy();
     let build_dir = Path::new("./build");
-    if !build_dir.exists() {
-        if let Err(e) = std::fs::create_dir_all(build_dir) {
-            eprintln!("Error creating build directory: {}", e);
-            std::process::exit(1);
-        }
+    if let Err(e) = std::fs::create_dir_all(build_dir) {
+        eprintln!("Error creating build directory: {}", e);
+        std::process::exit(1);
     }
 
     let output_file = build_dir.join(format!("{}.s", file_stem));
