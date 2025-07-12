@@ -1,6 +1,4 @@
-use std::path::{Path, PathBuf};
-
-use crate::{generator::generate, parser::parse, tokenizer::tokenize};
+use crate::{generator::Generator, parser::parse};
 
 mod generator;
 mod parser;
@@ -26,26 +24,21 @@ fn main() {
         }
     };
 
-    let tokens = tokenize(&script);
+    let tokens = tokenizer::tokenize(&script);
+
     let ast_nodes = parse(tokens);
-    let generator = generate(&ast_nodes);
+
+    let mut generator = Generator::new();
+    generator.generate(&ast_nodes);
 
     let assembly_code = utils::generate_assembly(generator.rodata, generator.bss, generator.text);
 
-    let input_path = Path::new(file_path);
-    let file_stem = input_path.file_stem().unwrap_or_default().to_string_lossy();
-    let build_dir = Path::new("./build");
-    if let Err(e) = std::fs::create_dir_all(build_dir) {
-        eprintln!("Error creating build directory: {}", e);
-        std::process::exit(1);
-    }
-
-    let output_file = build_dir.join(format!("{}.s", file_stem));
-
-    match std::fs::write(&output_file, assembly_code) {
-        Ok(_) => println!("Assembly code written to {}", output_file.display()),
+    // write to file
+    let output_file = "output.s";
+    match std::fs::write(output_file, assembly_code) {
+        Ok(_) => println!("Assembly code written to {}", output_file),
         Err(e) => {
-            eprintln!("Error writing to file {}: {}", output_file.display(), e);
+            eprintln!("Error writing to file {}: {}", output_file, e);
             std::process::exit(1);
         }
     }
