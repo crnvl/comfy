@@ -26,3 +26,28 @@ pub fn generate_str_varname() -> String {
     name.push_str(&generate_random_alphanumeric_string(8));
     name
 }
+
+pub fn generate_assembly(rodata: Vec<String>, bss: Vec<String>, text: Vec<String>) -> String {
+    let mut assembly_code = String::new();
+    assembly_code.push_str("\n.section .rodata\n");
+    for rodata_item in rodata.iter() {
+        assembly_code.push_str("\t");
+        assembly_code.push_str(rodata_item.as_str());
+        assembly_code.push('\n');
+    }
+
+    assembly_code.push_str("\n.section .bss\n");
+    for bss_item in bss.iter() {
+        assembly_code.push_str("\t");
+        assembly_code.push_str(bss_item.as_str());
+        assembly_code.push('\n');
+    }
+
+    assembly_code.push_str("\n.section .text\n");
+    for text_item in text.iter() {
+        assembly_code.push_str(text_item.as_str());
+        assembly_code.push('\n');
+    }
+
+    assembly_code
+}

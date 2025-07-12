@@ -31,8 +31,9 @@ fn main() {
     println!("AST Nodes: {:#?}\n", ast_nodes);
 
     let mut generator = Generator::new();
-    let assembly_code = generator.generate(&ast_nodes);
+    generator.generate(&ast_nodes);
 
+    let assembly_code = utils::generate_assembly(generator.rodata, generator.bss, generator.text);
     println!("Generated Assembly Code:\n{}", assembly_code);
 
     // write to file

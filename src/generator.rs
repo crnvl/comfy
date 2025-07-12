@@ -7,9 +7,9 @@ use crate::{
 };
 
 pub struct Generator {
-    rodata: Vec<String>,
-    bss: Vec<String>,
-    text: Vec<String>,
+    pub rodata: Vec<String>,
+    pub bss: Vec<String>,
+    pub text: Vec<String>,
 }
 
 impl Generator {
@@ -25,7 +25,7 @@ impl Generator {
         self_data
     }
 
-    pub fn generate(&mut self, ast: &AstNode) -> String {
+    pub fn generate(&mut self, ast: &AstNode) {
         match ast {
             AstNode::Program(statements) => {
                 for statement in statements.iter() {
@@ -80,32 +80,5 @@ impl Generator {
                 panic!("Unsupported AST node type for code generation");
             }
         }
-
-        self.generate_asm()
-    }
-
-    pub fn generate_asm(&mut self) -> String {
-        let mut assembly_code = String::new();
-        assembly_code.push_str("\n.section .rodata\n");
-        for rodata_item in self.rodata.iter() {
-            assembly_code.push_str("\t");
-            assembly_code.push_str(rodata_item.as_str());
-            assembly_code.push('\n');
-        }
-
-        assembly_code.push_str("\n.section .bss\n");
-        for bss_item in self.bss.iter() {
-            assembly_code.push_str("\t");
-            assembly_code.push_str(bss_item.as_str());
-            assembly_code.push('\n');
-        }
-
-        assembly_code.push_str("\n.section .text\n");
-        for text_item in self.text.iter() {
-            assembly_code.push_str(text_item.as_str());
-            assembly_code.push('\n');
-        }
-
-        assembly_code
     }
 }
