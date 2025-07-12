@@ -1,12 +1,19 @@
-use crate::{syscalls::sys_write, tokenizer::Token};
+use crate::{
+    syscalls::{sys_exit, sys_write},
+    tokenizer::Token,
+};
 
 #[derive(Debug)]
 pub enum AstNode {
     Program(Vec<AstNode>),
-    FunctionDefinition(String, Vec<Token>, Vec<AstNode>),
+    Number(i32),
+    String(String),
+    Identifier(String, i32),
+    FunctionDefinition(String, Vec<AstNode>, Vec<AstNode>),
 
     // syscall wrappers
-    Write(usize, String, usize),
+    Write(usize, String),
+    Exit(i32),
 }
 
 pub fn parse(tokens: Vec<Token>) -> AstNode {
@@ -48,7 +55,7 @@ impl Parser {
 
         let mut parameters = Vec::new();
         while self.current_token() != Token::ParentClose {
-            let parameter = self.parse_datatype();
+            let parameter = self.parse_parameter();
             parameters.push(parameter);
 
             if self.current_token() == Token::Comma {
@@ -72,6 +79,7 @@ impl Parser {
     fn parse_syscall(&mut self, syscall: String) -> AstNode {
         match syscall.as_str() {
             "write" => sys_write(self),
+            "exit" => sys_exit(self),
             _ => {
                 panic!("Unknown syscall: {}", syscall);
             }
@@ -88,23 +96,58 @@ impl Parser {
         }
     }
 
-    fn parse_datatype(&mut self) -> Token {
+    fn parse_datatype(&mut self) -> AstNode {
         match self.current_token() {
             Token::Number(number) => {
                 self.consume(Token::Number(number));
-                Token::Number(number)
+                AstNode::Number(number)
             }
             Token::String(string) => {
                 self.consume(Token::String(string.clone()));
-                Token::String(string.clone())
-            }
-            Token::Identifier(id) => {
-                self.consume_identifier();
-                Token::Identifier(id.clone())
+                AstNode::String(string.clone())
             }
             _ => {
                 panic!("Expected a datatype, found: {:?}", self.current_token())
             }
+        }
+    }
+
+    fn parse_parameter(&mut self) -> AstNode {
+        match self.current_token() {
+            Token::Identifier(id) => self.consume_sized_identifier(id),
+            _ => {
+                panic!(
+                    "Expected a parameter identifier, found: {:?}",
+                    self.current_token()
+                )
+            }
+        }
+    }
+
+    fn consume_sized_identifier(&mut self, id: String) -> AstNode {
+        let identifier = self.consume_identifier();
+
+        self.consume(Token::Colon);
+
+        let size = if let Token::Number(size) = self.current_token() {
+            self.consume(Token::Number(size));
+            size
+        } else {
+            panic!(
+                "Expected size after identifier, found: {:?}",
+                self.current_token()
+            );
+        };
+
+        AstNode::Identifier(identifier, size)
+    }
+
+    fn consume_identifier(&mut self) -> String {
+        if let Token::Identifier(id) = self.current_token() {
+            self.consume(Token::Identifier(id.clone()));
+            id
+        } else {
+            panic!("Expected identifier, found: {:?}", self.current_token());
         }
     }
 
@@ -119,15 +162,6 @@ impl Parser {
                 token,
                 self.current_token()
             );
-        }
-    }
-
-    fn consume_identifier(&mut self) -> String {
-        if let Token::Identifier(ref id) = self.current_token() {
-            self.current += 1;
-            id.clone()
-        } else {
-            panic!("Expected identifier, found {:?}", self.current_token());
         }
     }
 }

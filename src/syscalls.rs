@@ -1,4 +1,7 @@
-use crate::{parser::{AstNode, Parser}, tokenizer::Token};
+use crate::{
+    parser::{AstNode, Parser},
+    tokenizer::Token,
+};
 
 pub fn sys_write(parser: &mut Parser) -> AstNode {
     parser.consume(Token::Syscall("write".to_string()));
@@ -19,17 +22,26 @@ pub fn sys_write(parser: &mut Parser) -> AstNode {
     };
     parser.consume(Token::String(string.clone()));
 
-    parser.consume(Token::Comma);
-
-    let length = match parser.current_token() {
-        Token::Number(n) => n,
-        _ => panic!("Expected length (number)"),
-    };
-    parser.consume(Token::Number(length));
-
     parser.consume(Token::ParentClose);
 
     parser.consume(Token::Semicolon);
 
-    AstNode::Write(fd as usize, string, length as usize)
+    AstNode::Write(fd as usize, string)
+}
+
+pub fn sys_exit(parser: &mut Parser) -> AstNode {
+    parser.consume(Token::Syscall("exit".to_string()));
+
+    parser.consume(Token::ParentOpen);
+
+    let code = match parser.current_token() {
+        Token::Number(n) => n,
+        _ => panic!("Expected exit code (number)"),
+    };
+    parser.consume(Token::Number(code));
+
+    parser.consume(Token::ParentClose);
+    parser.consume(Token::Semicolon);
+
+    AstNode::Exit(code)
 }

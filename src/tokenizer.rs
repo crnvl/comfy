@@ -12,6 +12,7 @@ pub enum Token {
     CurlyClose,
     Comma,
     Semicolon,
+    Colon,
 
     EOF, // End of File
     Unknown,
@@ -31,6 +32,7 @@ pub fn tokenize(script: &str) -> Vec<Token> {
             '}' => tokens.push(Token::CurlyClose),
             ',' => tokens.push(Token::Comma),
             ';' => tokens.push(Token::Semicolon),
+            ':' => tokens.push(Token::Colon),
 
             '$' => {
                 let mut syscall = String::new();
@@ -66,7 +68,7 @@ pub fn tokenize(script: &str) -> Vec<Token> {
                         break;
                     }
                 }
-                
+
                 match identifier.as_str() {
                     "fn" => tokens.push(Token::Function),
                     _ => tokens.push(Token::Identifier(identifier)),
