@@ -1,4 +1,4 @@
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use crate::{generator::generate, parser::parse, tokenizer::tokenize};
 
