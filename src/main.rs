@@ -41,12 +41,11 @@ fn main() {
     }
 
     let output_file = build_dir.join(format!("{}.s", file_stem));
-    let output_file = output_file.to_string_lossy().to_string();
 
     match std::fs::write(&output_file, assembly_code) {
-        Ok(_) => println!("Assembly code written to {}", output_file),
+        Ok(_) => println!("Assembly code written to {}", output_file.display()),
         Err(e) => {
-            eprintln!("Error writing to file {}: {}", output_file, e);
+            eprintln!("Error writing to file {}: {}", output_file.display(), e);
             std::process::exit(1);
         }
     }
