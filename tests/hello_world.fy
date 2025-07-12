@@ -1,3 +1,4 @@
 fn main() {
-    write(1, "comfy world!", 12);
+    $write(1, "hello comfy!\n");
+    $exit(703);
 }

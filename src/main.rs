@@ -1,4 +1,10 @@
+use crate::{generator::Generator, parser::parse};
+
+mod generator;
+mod parser;
+mod syscalls;
 mod tokenizer;
+mod utils;
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
@@ -20,5 +26,20 @@ fn main() {
 
     let tokens = tokenizer::tokenize(&script);
 
-    println!("Tokens: {:?}", tokens);
+    let ast_nodes = parse(tokens);
+
+    let mut generator = Generator::new();
+    generator.generate(&ast_nodes);
+
+    let assembly_code = utils::generate_assembly(generator.rodata, generator.bss, generator.text);
+
+    // write to file
+    let output_file = "output.s";
+    match std::fs::write(output_file, assembly_code) {
+        Ok(_) => println!("Assembly code written to {}", output_file),
+        Err(e) => {
+            eprintln!("Error writing to file {}: {}", output_file, e);
+            std::process::exit(1);
+        }
+    }
 }
