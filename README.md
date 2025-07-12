@@ -34,4 +34,6 @@ The following syscalls are currently supported:
 - [ ] Parser
 - [ ] Generator
 - [ ] Support for all arm32 syscalls
+- [ ] Direct asm support
 - [ ] stdlib for helper functions
+- [ ] Marry luna
