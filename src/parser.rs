@@ -1,13 +1,9 @@
-use crate::tokenizer::Token;
+use crate::{syscalls::sys_write, tokenizer::Token};
 
 #[derive(Debug)]
 pub enum AstNode {
     Program(Vec<AstNode>),
-    FunctionDefinition(
-        String,       // Function name
-        Vec<String>,  // Parameters
-        Vec<AstNode>, // Body
-    ),
+    FunctionDefinition(String, Vec<Token>, Vec<AstNode>),
 
     // syscall wrappers
     Write(usize, String, usize),
@@ -18,7 +14,7 @@ pub fn parse(tokens: Vec<Token>) -> AstNode {
     parser.parse()
 }
 
-struct Parser {
+pub struct Parser {
     tokens: Vec<Token>,
     current: usize,
 }
@@ -39,18 +35,8 @@ impl Parser {
         AstNode::Program(statements)
     }
 
-    fn current_token(&self) -> Token {
+    pub fn current_token(&self) -> Token {
         self.tokens[self.current].clone()
-    }
-
-    fn parse_statement(&mut self) -> AstNode {
-        match self.current_token() {
-            Token::Function => self.parse_function_definition(),
-            Token::Syscall => 
-            _ => {
-                panic!("Expected a statement, found: {:?}", self.current_token())
-            }
-        }
     }
 
     fn parse_function_definition(&mut self) -> AstNode {
@@ -62,13 +48,12 @@ impl Parser {
 
         let mut parameters = Vec::new();
         while self.current_token() != Token::ParentClose {
-            if let Token::Identifier(ref id) = self.current_token() {
-                parameters.push(id.clone());
-                self.current += 1; // Consume identifier
-                continue;
-            }
+            let parameter = self.parse_datatype();
+            parameters.push(parameter);
 
-            
+            if self.current_token() == Token::Comma {
+                self.consume(Token::Comma);
+            }
         }
         self.consume(Token::ParentClose);
 
@@ -84,27 +69,46 @@ impl Parser {
         AstNode::FunctionDefinition(identifier, parameters, body)
     }
 
-    fn parse_syscall(&mut self) -> AstNode {
-        let identifier = self.consume_identifier();
-
-        self.consume(Token::ParentOpen);
-
-        let mut args = Vec::new();
-        while self.current_token() != Token::ParentClose {
-            if let Token::Identifier(ref id) = self.current_token() {
-                args.push(id.clone());
-            } else if let Token::Number(num) = self.current_token() {
-                args.push(num.to_string());
-            } else {
-                panic!("Expected identifier or number, found: {:?}", self.current_token());
+    fn parse_syscall(&mut self, syscall: String) -> AstNode {
+        match syscall.as_str() {
+            "write" => sys_write(self),
+            _ => {
+                panic!("Unknown syscall: {}", syscall);
             }
-            self.current += 1;
         }
-
-        self.consume(Token::ParentClose);
     }
 
-    fn consume(&mut self, token: Token) -> Token {
+    fn parse_statement(&mut self) -> AstNode {
+        match self.current_token() {
+            Token::Function => self.parse_function_definition(),
+            Token::Syscall(syscall) => self.parse_syscall(syscall),
+            _ => {
+                panic!("Expected a statement, found: {:?}", self.current_token())
+            }
+        }
+    }
+
+    fn parse_datatype(&mut self) -> Token {
+        match self.current_token() {
+            Token::Number(number) => {
+                self.consume(Token::Number(number));
+                Token::Number(number)
+            }
+            Token::String(string) => {
+                self.consume(Token::String(string.clone()));
+                Token::String(string.clone())
+            }
+            Token::Identifier(id) => {
+                self.consume_identifier();
+                Token::Identifier(id.clone())
+            }
+            _ => {
+                panic!("Expected a datatype, found: {:?}", self.current_token())
+            }
+        }
+    }
+
+    pub fn consume(&mut self, token: Token) -> Token {
         if self.current_token() == token {
             let consumed = self.tokens[self.current].clone();
             self.current += 1;
