@@ -1,10 +1,4 @@
-use std::collections::HashMap;
-
-use crate::{
-    parser::AstNode,
-    tokenizer::Token,
-    utils::{generate_num_varname, generate_str_varname},
-};
+use crate::{parser::AstNode, utils::generate_str_varname};
 
 pub struct Generator {
     pub rodata: Vec<String>,

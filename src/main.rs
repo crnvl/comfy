@@ -25,16 +25,13 @@ fn main() {
     };
 
     let tokens = tokenizer::tokenize(&script);
-    println!("Tokens: {:#?}\n", tokens);
 
     let ast_nodes = parse(tokens);
-    println!("AST Nodes: {:#?}\n", ast_nodes);
 
     let mut generator = Generator::new();
     generator.generate(&ast_nodes);
 
     let assembly_code = utils::generate_assembly(generator.rodata, generator.bss, generator.text);
-    println!("Generated Assembly Code:\n{}", assembly_code);
 
     // write to file
     let output_file = "output.s";
