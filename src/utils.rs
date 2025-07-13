@@ -13,7 +13,7 @@ fn generate_random_alphanumeric_string(length: usize) -> String {
         .collect()
 }
 
-pub fn generate_num_varname() -> String {
+pub fn _generate_num_varname() -> String {
     let mut name = String::new();
     name.push_str("int_");
     name.push_str(&generate_random_alphanumeric_string(8));

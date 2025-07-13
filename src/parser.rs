@@ -132,7 +132,7 @@ impl Parser {
 
     fn parse_parameter(&mut self) -> AstNode {
         match self.current_token() {
-            Token::Identifier(id) => self.consume_sized_identifier(id),
+            Token::Identifier(_) => self.consume_sized_identifier(),
             _ => {
                 panic!(
                     "Expected a parameter identifier, found: {:?}",
@@ -142,7 +142,7 @@ impl Parser {
         }
     }
 
-    fn consume_sized_identifier(&mut self, id: String) -> AstNode {
+    fn consume_sized_identifier(&mut self) -> AstNode {
         let identifier = self.consume_identifier();
 
         self.consume(Token::Colon);
