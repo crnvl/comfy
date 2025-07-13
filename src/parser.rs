@@ -10,10 +10,11 @@ pub enum AstNode {
     String(String),
     Identifier(String, i32),
     FunctionDefinition(String, Vec<AstNode>, Vec<AstNode>),
+    VariableDeclaration(String, Box<AstNode>),
 
     // syscall wrappers
-    Write(usize, String),
-    Exit(i32),
+    Write(usize, Token),
+    Exit(Token),
 }
 
 pub fn parse(tokens: Vec<Token>) -> AstNode {
@@ -86,14 +87,31 @@ impl Parser {
         }
     }
 
+    fn parse_variable_declaration(&mut self) -> AstNode {
+        self.consume(Token::Let);
+
+        let identifier = self.consume_identifier();
+
+        self.consume(Token::Equals);
+
+        let datatype = self.parse_datatype();
+
+        self.consume(Token::Semicolon);
+
+        AstNode::VariableDeclaration(identifier, Box::new(datatype))
+    }
+
     fn parse_statement(&mut self) -> AstNode {
-        match self.current_token() {
+        let ast_node = match self.current_token() {
             Token::Function => self.parse_function_definition(),
             Token::Syscall(syscall) => self.parse_syscall(syscall),
+            Token::Let => self.parse_variable_declaration(),
             _ => {
                 panic!("Expected a statement, found: {:?}", self.current_token())
             }
-        }
+        };
+
+        ast_node
     }
 
     fn parse_datatype(&mut self) -> AstNode {

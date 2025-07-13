@@ -16,17 +16,18 @@ pub fn sys_write(parser: &mut Parser) -> AstNode {
 
     parser.consume(Token::Comma);
 
-    let string = match parser.current_token() {
-        Token::String(s) => s,
-        _ => panic!("Expected string argument"),
+    let write_data = match parser.current_token() {
+        Token::String(s) => Token::String(s),
+        Token::Identifier(id) => Token::Identifier(id),
+        _ => panic!("Expected write data (string or identifier)"),
     };
-    parser.consume(Token::String(string.clone()));
+    parser.consume(write_data.clone());
 
     parser.consume(Token::ParentClose);
 
     parser.consume(Token::Semicolon);
 
-    AstNode::Write(fd as usize, string)
+    AstNode::Write(fd as usize, write_data)
 }
 
 pub fn sys_exit(parser: &mut Parser) -> AstNode {
@@ -35,10 +36,11 @@ pub fn sys_exit(parser: &mut Parser) -> AstNode {
     parser.consume(Token::ParentOpen);
 
     let code = match parser.current_token() {
-        Token::Number(n) => n,
-        _ => panic!("Expected exit code (number)"),
+        Token::Number(n) => Token::Number(n),
+        Token::Identifier(id) => Token::Identifier(id),
+        _ => panic!("Expected exit code (number or identifier)"),
     };
-    parser.consume(Token::Number(code));
+    parser.consume(code.clone());
 
     parser.consume(Token::ParentClose);
     parser.consume(Token::Semicolon);
