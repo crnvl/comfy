@@ -38,7 +38,7 @@ pub fn sys_exit(parser: &mut Parser) -> AstNode {
     let code = match parser.current_token() {
         Token::Number(n) => Token::Number(n),
         Token::Identifier(id) => Token::Identifier(id),
-        _ => panic!("Expected exit code (number)"),
+        _ => panic!("Expected exit code (number or identifier)"),
     };
     parser.consume(code.clone());
 
