@@ -25,8 +25,8 @@ The following syscalls are currently supported:
 
 | Supported? | Syscall Name | Wrapper Function  | Description                    |
 | ---------- | ------------ | ----------------- | ------------------------------ |
-| ✅         | `write`      | `$write(fd, buf)` | Write to a file descriptor.    |
 | ✅         | `exit`       | `$exit(status)`   | Terminate the calling process. |
+| ✅         | `write`      | `$write(fd, buf)` | Write to a file descriptor.    |
 
 ## Progress
 
