@@ -1,5 +1,5 @@
 use crate::{
-    syscalls::{sys_exit, sys_write},
+    syscalls::{sys_exit, sys_write, sys_read},
     tokenizer::Token,
 };
 
@@ -14,6 +14,7 @@ pub enum AstNode {
 
     // syscall wrappers
     Write(usize, Token),
+    Read(usize, String),
     Exit(Token),
 }
 
@@ -80,6 +81,7 @@ impl Parser {
     fn parse_syscall(&mut self, syscall: String) -> AstNode {
         match syscall.as_str() {
             "write" => sys_write(self),
+            "read" => sys_read(self),
             "exit" => sys_exit(self),
             _ => {
                 panic!("Unknown syscall: {}", syscall);
@@ -92,9 +94,22 @@ impl Parser {
 
         let identifier = self.consume_identifier();
 
-        self.consume(Token::Equals);
+        let datatype = if self.current_token() == Token::Colon {
+            self.consume(Token::Colon);
 
-        let datatype = self.parse_datatype();
+            if let Token::Number(size) = self.current_token() {
+                self.consume(Token::Number(size));
+                AstNode::Number(size)
+            } else {
+                panic!(
+                    "Expected size after colon in variable declaration, found: {:?}",
+                    self.current_token()
+                );
+            }
+        } else {
+            self.consume(Token::Equals);
+            self.parse_datatype()
+        };
 
         self.consume(Token::Semicolon);
 

@@ -30,6 +30,31 @@ pub fn sys_write(parser: &mut Parser) -> AstNode {
     AstNode::Write(fd as usize, write_data)
 }
 
+pub fn sys_read(parser: &mut Parser) -> AstNode {
+    parser.consume(Token::Syscall("read".to_string()));
+
+    parser.consume(Token::ParentOpen);
+
+    let fd = match parser.current_token() {
+        Token::Number(n) => n,
+        _ => panic!("Expected file descriptor (number)"),
+    };
+    parser.consume(Token::Number(fd));
+
+    parser.consume(Token::Comma);
+
+    let buffer = match parser.current_token() {
+        Token::Identifier(id) => id,
+        _ => panic!("Expected buffer identifier"),
+    };
+    
+    parser.consume(Token::Identifier(buffer.clone()));
+    parser.consume(Token::ParentClose);
+    parser.consume(Token::Semicolon);
+
+    AstNode::Read(fd as usize, buffer)
+}
+
 pub fn sys_exit(parser: &mut Parser) -> AstNode {
     parser.consume(Token::Syscall("exit".to_string()));
 

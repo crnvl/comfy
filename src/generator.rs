@@ -97,6 +97,17 @@ impl Generator {
                     _ => panic!("Unsupported exit code type"),
                 }
             }
+            
+            AstNode::Read(fd, buffer) => {
+                let syscall_number = 3;
+                let fd_str = fd.to_string();
+
+                self.text.push(format!(
+                    "\tmov r7, #{}\n\tmov r0, #{}\n\tldr r1, ={}\n\tsvc #0\n",
+                    syscall_number, fd_str, buffer
+                ));
+            }
+
             AstNode::Write(fd, write_data) => {
                 let syscall_number = 4;
                 let fd_str = fd.to_string();
