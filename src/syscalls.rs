@@ -19,7 +19,7 @@ pub fn sys_write(parser: &mut Parser) -> AstNode {
     let write_data = match parser.current_token() {
         Token::String(s) => Token::String(s),
         Token::Identifier(id) => Token::Identifier(id),
-        _ => panic!("Expected string argument"),
+        _ => panic!("Expected write data (string or identifier)"),
     };
     parser.consume(write_data.clone());
 
