@@ -1,4 +1,7 @@
-# comfy
+<center>
+<img src="./assets/comfylang.png" alt="comfy logo">
+</center>
+
 
 **comfy** is a low-level, compiled scripting language with direct [arm32](https://en.wikipedia.org/wiki/ARM_architecture_family#32-bit_architecture) syscall access.
 
