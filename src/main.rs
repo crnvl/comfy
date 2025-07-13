@@ -17,6 +17,7 @@ fn main() {
     }
 
     let file_path = &args[1];
+    let verbose = args.get(2).map_or(false, |arg| arg == "--verbose");
 
     let script = match std::fs::read_to_string(file_path) {
         Ok(content) => content,
@@ -27,10 +28,20 @@ fn main() {
     };
 
     let tokens = tokenize(&script);
+    if verbose {
+        println!("Tokens: {:?}", tokens);
+    }
     let ast_nodes = parse(tokens);
+    if verbose {
+        println!("AST Nodes: {:?}", ast_nodes);
+    }
+
     let generator = generate(&ast_nodes);
 
     let assembly_code = utils::generate_assembly(generator.rodata, generator.bss, generator.text);
+    if verbose {
+        println!("Generated Assembly Code:\n{}", assembly_code);
+    }
 
     let input_path = Path::new(file_path);
     let file_stem = input_path.file_stem().unwrap_or_default().to_string_lossy();

@@ -1,4 +1,5 @@
 fn main() {
-    $write(1, "hello comfy!\n");
-    $exit(703);
+    let exit_code = 200;
+    $write(1, "wifey");
+    $exit(exit_code);
 }
