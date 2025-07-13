@@ -1,11 +1,9 @@
-fn main() {   
-    let cute_text = "Hello, World!\n";
-    $write(1, cute_text);
-    $exit(0);
-}
 
-fn meow(arg: 16) {
-    let cute_text = "Meow!\n";
-    $write(1, cute_text);    
-    $exit(0);
+fn main() {
+    $write(1, "hello comfy!\n");
+
+    let hello_text = ":3\n";
+    $write(1, hello_text);
+
+    $exit(703);
 }

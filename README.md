@@ -3,6 +3,7 @@
 **comfy** is a low-level, compiled scripting language with direct [arm32](https://en.wikipedia.org/wiki/ARM_architecture_family#32-bit_architecture) syscall access.
 
 ## Features
+
 - Direct access to arm32 syscalls
 - Simple syntax for low-level programming
 - Compiles to arm32 assembly
@@ -12,6 +13,10 @@
 ```
 fn main() {
     $write(1, "hello comfy!\n");
+
+    let hello_text = ":3\n";
+    $write(1, hello_text);
+
     $exit(703);
 }
 ```
