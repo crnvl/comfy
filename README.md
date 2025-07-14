@@ -42,3 +42,8 @@ The following syscalls are currently supported:
 - [ ] Direct asm support
 - [ ] stdlib for helper functions
 - [ ] Marry luna
+
+
+## Todos
+
+- [ ] Write abstraction layer to avoid inline asm (maybe platform specific modules?)

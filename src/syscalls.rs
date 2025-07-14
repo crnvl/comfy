@@ -25,8 +25,6 @@ pub fn sys_write(parser: &mut Parser) -> AstNode {
 
     parser.consume(Token::ParentClose);
 
-    parser.consume(Token::Semicolon);
-
     AstNode::Write(fd as usize, write_data)
 }
 
@@ -50,7 +48,6 @@ pub fn sys_read(parser: &mut Parser) -> AstNode {
     
     parser.consume(Token::Identifier(buffer.clone()));
     parser.consume(Token::ParentClose);
-    parser.consume(Token::Semicolon);
 
     AstNode::Read(fd as usize, buffer)
 }
@@ -68,7 +65,6 @@ pub fn sys_exit(parser: &mut Parser) -> AstNode {
     parser.consume(code.clone());
 
     parser.consume(Token::ParentClose);
-    parser.consume(Token::Semicolon);
 
     AstNode::Exit(code)
 }

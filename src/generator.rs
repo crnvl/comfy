@@ -1,4 +1,4 @@
-use crate::{parser::AstNode, tokenizer::Token, utils::generate_str_varname};
+use crate::{parser::AstNode, tokenizer::Token, utils::{generate_str_varname, load_syscall_return_value_into_label, store_syscall_return_value}};
 
 pub fn generate(ast: &AstNode) -> Generator {
     let mut generator = Generator::new();
@@ -75,6 +75,23 @@ impl Generator {
                         self.rodata
                             .push(format!("{}_len = .-{}", unique_name, unique_name));
                     }
+                    AstNode::Read(fd, buffer) => {
+                        let syscall_number = 3;
+                        let fd_str = fd.to_string();
+                        let label = format!("{}_{}", self.last_fun_name, buffer);
+
+                        self.text.push(format!(
+                            "\tmov r7, #{}\n\tmov r0, #{}\n\tldr r1, ={}\n\tsvc #0\n",
+                            syscall_number, fd_str, label
+                        ));
+
+                        store_syscall_return_value(&mut self.text);
+
+                        let var_label = format!("{}_{}", self.last_fun_name, id);
+                        self.bss.push(format!(".lcomm {}, 4", var_label));
+
+                        load_syscall_return_value_into_label(&mut self.text, &var_label);
+                    }
                     _ => panic!("Unsupported variable type for declaration"),
                 };
             }
@@ -101,11 +118,13 @@ impl Generator {
             AstNode::Read(fd, buffer) => {
                 let syscall_number = 3;
                 let fd_str = fd.to_string();
+                let label = format!("{}_{}", self.last_fun_name, buffer);
 
                 self.text.push(format!(
                     "\tmov r7, #{}\n\tmov r0, #{}\n\tldr r1, ={}\n\tsvc #0\n",
-                    syscall_number, fd_str, buffer
+                    syscall_number, fd_str, label
                 ));
+                store_syscall_return_value(&mut self.text);
             }
 
             AstNode::Write(fd, write_data) => {
@@ -141,6 +160,13 @@ impl Generator {
                     }
                 }
             }
+
+            AstNode::Identifier(name, size) => {
+                let label = format!("{}_{}", self.last_fun_name, name);
+                self.bss.push(format!(".lcomm {}, {}", label, size));
+                self.bss.push(format!("{}_len = {}", label, size));
+            }
+
             _ => {
                 panic!("Unsupported AST node type for code generation");
             }

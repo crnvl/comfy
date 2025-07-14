@@ -94,33 +94,55 @@ impl Parser {
 
         let identifier = self.consume_identifier();
 
-        let datatype = if self.current_token() == Token::Colon {
-            self.consume(Token::Colon);
+        self.consume(Token::Equals);
 
-            if let Token::Number(size) = self.current_token() {
-                self.consume(Token::Number(size));
-                AstNode::Number(size)
-            } else {
-                panic!(
-                    "Expected size after colon in variable declaration, found: {:?}",
-                    self.current_token()
-                );
-            }
-        } else {
-            self.consume(Token::Equals);
-            self.parse_datatype()
+        let value = match self.current_token() {
+            Token::Number(_) | Token::String(_) => self.parse_datatype(),
+            Token::Syscall(sys) => self.parse_syscall(sys),
+            _ => panic!("Unsupported value in variable declaration: {:?}", self.current_token()),
         };
 
         self.consume(Token::Semicolon);
 
-        AstNode::VariableDeclaration(identifier, Box::new(datatype))
+        AstNode::VariableDeclaration(identifier, Box::new(value))
     }
+
+    fn parse_buffer_declaration(&mut self) -> AstNode {
+        self.consume(Token::Buf);
+        self.consume(Token::BracketOpen);
+
+        let bufsize_token = self.current_token();
+        let size = if let Token::Number(n) = bufsize_token {
+            self.consume(bufsize_token.clone());
+            n
+        } else {
+            panic!(
+                "Expected a number for buffer size, found: {:?}",
+                bufsize_token
+            );
+        };
+
+        self.consume(Token::BracketClose);
+
+        let identifier = self.consume_identifier();
+
+        self.consume(Token::Semicolon);
+
+        AstNode::Identifier(identifier, size)
+    }
+
 
     fn parse_statement(&mut self) -> AstNode {
         let ast_node = match self.current_token() {
             Token::Function => self.parse_function_definition(),
-            Token::Syscall(syscall) => self.parse_syscall(syscall),
+            Token::Syscall(syscall) => { 
+                let node = self.parse_syscall(syscall);
+                
+                self.consume(Token::Semicolon);
+                node
+            },
             Token::Let => self.parse_variable_declaration(),
+            Token::Buf => self.parse_buffer_declaration(),
             _ => {
                 panic!("Expected a statement, found: {:?}", self.current_token())
             }
