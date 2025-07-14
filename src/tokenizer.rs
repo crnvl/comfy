@@ -15,6 +15,9 @@ pub enum Token {
     Colon,
     Equals,
     Let,
+    Buf,
+    BracketOpen,
+    BracketClose,
 
     EOF, // End of File
     Unknown,
@@ -36,6 +39,8 @@ pub fn tokenize(script: &str) -> Vec<Token> {
             ';' => tokens.push(Token::Semicolon),
             ':' => tokens.push(Token::Colon),
             '=' => tokens.push(Token::Equals),
+            '[' => tokens.push(Token::BracketOpen),
+            ']' => tokens.push(Token::BracketClose),
 
             '$' => {
                 let mut syscall = String::new();
@@ -75,6 +80,7 @@ pub fn tokenize(script: &str) -> Vec<Token> {
                 match identifier.as_str() {
                     "fn" => tokens.push(Token::Function),
                     "let" => tokens.push(Token::Let),
+                    "buf" => tokens.push(Token::Buf),
                     _ => tokens.push(Token::Identifier(identifier)),
                 }
             }

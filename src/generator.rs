@@ -1,4 +1,8 @@
-use crate::{parser::AstNode, tokenizer::Token, utils::generate_str_varname};
+use crate::{
+    parser::AstNode,
+    tokenizer::Token,
+    utils::{generate_str_varname, load_syscall_return_value_into_label, store_syscall_return_value},
+};
 
 pub struct Generator {
     pub rodata: Vec<String>,
@@ -18,115 +22,149 @@ impl Generator {
         };
 
         self_data.text.push(".global _start".to_string());
-
         self_data
     }
 
     pub fn generate(&mut self, ast: &AstNode) {
         match ast {
             AstNode::Program(statements) => {
-                for statement in statements.iter() {
-                    self.generate(statement);
+                for stmt in statements {
+                    self.generate(stmt);
                 }
             }
+
             AstNode::FunctionDefinition(name, params, body) => {
-                let fun_name: String;
-
-                if name == "main" {
-                    fun_name = "_start".to_string();
+                let fun_name = if name == "main" {
+                    "_start".to_string()
                 } else {
-                    fun_name = name.clone();
-
-                    for param in params.iter() {
-                        if let AstNode::Identifier(param_name, size) = param {
-                            let unique_param_name = format!("{}_{}", fun_name, param_name);
-
-                            self.bss
-                                .push(format!(".lcomm {}, {}", unique_param_name, size));
-                        } else {
-                            panic!("Expected identifier for function parameter");
-                        }
-                    }
-                }
+                    name.clone()
+                };
 
                 self.last_fun_name = fun_name.clone();
                 self.text.push(format!("{}:", fun_name));
 
-                for body_statement in body.iter() {
-                    self.generate(body_statement);
+                // Declare params in .bss
+                for param in params {
+                    if let AstNode::Identifier(param_name, size) = param {
+                        self.bss.push(format!(
+                            ".lcomm {}_{}, {}",
+                            fun_name, param_name, size
+                        ));
+                    }
+                }
+
+                for stmt in body {
+                    self.generate(stmt);
                 }
             }
-            AstNode::VariableDeclaration(id, value) => {
+
+            AstNode::VariableDeclaration(name, value) => {
+                let label = format!("{}_{}", self.last_fun_name, name);
+
                 match &**value {
                     AstNode::Number(n) => {
-                        self.rodata
-                            .push(format!("{}_{}: .word {}", self.last_fun_name, id, n));
+                        self.rodata.push(format!("{}: .word {}", label, n));
                     }
                     AstNode::String(s) => {
-                        let unique_name = format!("{}_{}", self.last_fun_name, id);
-                        self.rodata
-                            .push(format!("{}: .asciz \"{}\"", unique_name, s));
-                        self.rodata
-                            .push(format!("{}_len = .-{}", unique_name, unique_name));
+                        self.rodata.push(format!("{}: .asciz \"{}\"", label, s));
+                        self.rodata.push(format!("{}_len = .-{}", label, label));
                     }
-                    _ => panic!("Unsupported variable type for declaration"),
-                };
-            }
-            AstNode::Exit(code) => {
-                let syscall_number = 1;
-
-                match code {
-                    Token::Number(n) => {
-                        self.text.push(format!(
-                            "\tmov r7, #{}\n\tmov r0, #{}\n\tsvc #0\n",
-                            syscall_number, n
-                        ));
+                    AstNode::Syscall(_, _) => {
+                        self.bss.push(format!(".lcomm {}, 4", label));
+                        self.generate(value);
+                        load_syscall_return_value_into_label(&mut self.text, &label);
                     }
-                    Token::Identifier(id) => {
-                        self.text.push(format!(
-                            "\tmov r7, #{}\n\tldr r0, ={}\n\tsvc #0\n",
-                            syscall_number, id
-                        ));
-                    }
-                    _ => panic!("Unsupported exit code type"),
+                    _ => panic!("Unsupported variable declaration value: {:?}", value),
                 }
             }
-            AstNode::Write(fd, write_data) => {
-                let syscall_number = 4;
-                let fd_str = fd.to_string();
 
-                let string_varname = generate_str_varname();
-
-                match write_data {
-                    Token::String(string) => {
-                        self.rodata
-                            .push(format!("{}: .asciz \"{}\"", string_varname, string));
-                        let length_str = format!("{}_len", string_varname);
-                        self.rodata
-                            .push(format!("{} = .-{}", length_str, string_varname));
-
-                        self.text.push(format!(
-                            "\tmov r7, #{}\n\tmov r0, #{}\n\tldr r1, ={}\n\tldr r2, ={}\n\tsvc #0\n",
-                            syscall_number, fd_str, string_varname, length_str
-                        ));
-                    }
-                    Token::Identifier(id) => {
-                        let unique_id = format!("{}_{}", self.last_fun_name, id);
-
-                        let length_str = format!("{}_len", unique_id);
-                        self.text.push(format!(
-                            "\tmov r7, #{}\n\tmov r0, #{}\n\tldr r1, ={}\n\tldr r2, ={}\n\tsvc #0\n",
-                            syscall_number, fd_str, unique_id, length_str
-                        ));
-                    }
-                    _ => {
-                        panic!("Unsupported write data type: {:?}", write_data);
-                    }
-                }
+            AstNode::Identifier(name, size) => {
+                let label = format!("{}_{}", self.last_fun_name, name);
+                self.bss.push(format!(".lcomm {}, {}", label, size));
+                self.bss.push(format!("{}_len = {}", label, size));
             }
-            _ => {
-                panic!("Unsupported AST node type for code generation");
+
+            AstNode::Syscall(name, inner) => match name.as_str() {
+                "write" => self.generate_write(inner),
+                "read" => self.generate_read(inner),
+                "exit" => self.generate_exit(inner),
+                _ => panic!("Unknown syscall: {}", name),
+            },
+
+            _ => panic!("Unsupported AST node in code generation: {:?}", ast),
+        }
+    }
+
+    fn generate_write(&mut self, inner: &AstNode) {
+        let (fd, data) = match inner {
+            AstNode::Write(fd, token) => (fd, token),
+            _ => panic!("Invalid write syscall inner node"),
+        };
+
+        let syscall_number = 4;
+        let fd_str = fd.to_string();
+
+        match data {
+            Token::String(s) => {
+                let var = generate_str_varname();
+                self.rodata.push(format!("{}: .asciz \"{}\"", var, s));
+                self.rodata.push(format!("{}_len = .-{}", var, var));
+
+                self.text.push(format!(
+                    "\tmov r7, #{}\n\tmov r0, #{}\n\tldr r1, ={}\n\tldr r2, ={}_len\n\tsvc #0\n",
+                    syscall_number, fd_str, var, var
+                ));
             }
+
+            Token::Identifier(id) => {
+                let label = format!("{}_{}", self.last_fun_name, id);
+                self.text.push(format!(
+                    "\tmov r7, #{}\n\tmov r0, #{}\n\tldr r1, ={}\n\tldr r2, ={}_len\n\tsvc #0\n",
+                    syscall_number, fd_str, label, label
+                ));
+            }
+
+            _ => panic!("Unsupported write token: {:?}", data),
+        }
+    }
+
+    fn generate_read(&mut self, inner: &AstNode) {
+        let (fd, buffer) = match inner {
+            AstNode::Read(fd, buffer) => (fd, buffer),
+            _ => panic!("Invalid read syscall inner node"),
+        };
+
+        let syscall_number = 3;
+        let fd_str = fd.to_string();
+        let label = format!("{}_{}", self.last_fun_name, buffer);
+
+        self.text.push(format!(
+            "\tmov r7, #{}\n\tmov r0, #{}\n\tldr r1, ={}\n\tsvc #0\n",
+            syscall_number, fd_str, label
+        ));
+        store_syscall_return_value(&mut self.text);
+    }
+
+    fn generate_exit(&mut self, inner: &AstNode) {
+        let code = match inner {
+            AstNode::Exit(token) => token,
+            _ => panic!("Invalid exit syscall inner node"),
+        };
+
+        let syscall_number = 1;
+
+        match code {
+            Token::Number(n) => {
+                self.text
+                    .push(format!("\tmov r7, #{}\n\tmov r0, #{}\n\tsvc #0\n", syscall_number, n));
+            }
+            Token::Identifier(id) => {
+                self.text.push(format!(
+                    "\tmov r7, #{}\n\tldr r0, ={}\n\tsvc #0\n",
+                    syscall_number, id
+                ));
+            }
+            _ => panic!("Unsupported exit code: {:?}", code),
         }
     }
 }
