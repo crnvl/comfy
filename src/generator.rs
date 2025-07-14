@@ -14,6 +14,12 @@ pub struct Generator {
     last_fun_name: String,
 }
 
+pub fn generate(ast_nodes: &AstNode) -> Generator {
+    let mut generator = Generator::new();
+    generator.generate(ast_nodes);
+    generator
+}
+
 impl Generator {
     pub fn new() -> Self {
         let mut self_data = Self {
@@ -27,7 +33,7 @@ impl Generator {
         self_data
     }
 
-    pub fn generate(&mut self, ast: &AstNode) {
+    fn generate(&mut self, ast: &AstNode) {
         match ast {
             AstNode::Program(statements) => {
                 for stmt in statements {
