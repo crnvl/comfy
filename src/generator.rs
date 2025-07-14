@@ -1,7 +1,9 @@
 use crate::{
     parser::AstNode,
     tokenizer::Token,
-    utils::{generate_str_varname, load_syscall_return_value_into_label, store_syscall_return_value},
+    utils::{
+        generate_str_varname, load_syscall_return_value_into_label, store_syscall_return_value,
+    },
 };
 
 pub struct Generator {
@@ -10,6 +12,12 @@ pub struct Generator {
     pub text: Vec<String>,
 
     last_fun_name: String,
+}
+
+pub fn generate(ast_nodes: &AstNode) -> Generator {
+    let mut generator = Generator::new();
+    generator.generate(ast_nodes);
+    generator
 }
 
 impl Generator {
@@ -25,7 +33,7 @@ impl Generator {
         self_data
     }
 
-    pub fn generate(&mut self, ast: &AstNode) {
+    fn generate(&mut self, ast: &AstNode) {
         match ast {
             AstNode::Program(statements) => {
                 for stmt in statements {
@@ -46,10 +54,8 @@ impl Generator {
                 // Declare params in .bss
                 for param in params {
                     if let AstNode::Identifier(param_name, size) = param {
-                        self.bss.push(format!(
-                            ".lcomm {}_{}, {}",
-                            fun_name, param_name, size
-                        ));
+                        self.bss
+                            .push(format!(".lcomm {}_{}, {}", fun_name, param_name, size));
                     }
                 }
 
@@ -155,8 +161,10 @@ impl Generator {
 
         match code {
             Token::Number(n) => {
-                self.text
-                    .push(format!("\tmov r7, #{}\n\tmov r0, #{}\n\tsvc #0\n", syscall_number, n));
+                self.text.push(format!(
+                    "\tmov r7, #{}\n\tmov r0, #{}\n\tsvc #0\n",
+                    syscall_number, n
+                ));
             }
             Token::Identifier(id) => {
                 self.text.push(format!(
