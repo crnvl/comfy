@@ -1,5 +1,5 @@
 use crate::{
-    syscalls::{sys_exit, sys_write, sys_read},
+    syscalls::{parse_sys_exit, parse_sys_write, parse_sys_read},
     tokenizer::Token,
 };
 
@@ -11,8 +11,9 @@ pub enum AstNode {
     Identifier(String, i32),
     FunctionDefinition(String, Vec<AstNode>, Vec<AstNode>),
     VariableDeclaration(String, Box<AstNode>),
-
+    
     // syscall wrappers
+    Syscall(String, Box<AstNode>),
     Write(usize, Token),
     Read(usize, String),
     Exit(Token),
@@ -79,14 +80,16 @@ impl Parser {
     }
 
     fn parse_syscall(&mut self, syscall: String) -> AstNode {
-        match syscall.as_str() {
-            "write" => sys_write(self),
-            "read" => sys_read(self),
-            "exit" => sys_exit(self),
+        let matched_syscall = match syscall.as_str() {
+            "write" => parse_sys_write(self),
+            "read" => parse_sys_read(self),
+            "exit" => parse_sys_exit(self),
             _ => {
                 panic!("Unknown syscall: {}", syscall);
             }
-        }
+        };
+
+        AstNode::Syscall(syscall, Box::new(matched_syscall))
     }
 
     fn parse_variable_declaration(&mut self) -> AstNode {
@@ -96,7 +99,7 @@ impl Parser {
 
         self.consume(Token::Equals);
 
-        let value = match self.current_token() {
+        let value: AstNode = match self.current_token() {
             Token::Number(_) | Token::String(_) => self.parse_datatype(),
             Token::Syscall(sys) => self.parse_syscall(sys),
             _ => panic!("Unsupported value in variable declaration: {:?}", self.current_token()),

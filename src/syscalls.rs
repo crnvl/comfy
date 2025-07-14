@@ -3,7 +3,7 @@ use crate::{
     tokenizer::Token,
 };
 
-pub fn sys_write(parser: &mut Parser) -> AstNode {
+pub fn parse_sys_write(parser: &mut Parser) -> AstNode {
     parser.consume(Token::Syscall("write".to_string()));
 
     parser.consume(Token::ParentOpen);
@@ -28,7 +28,7 @@ pub fn sys_write(parser: &mut Parser) -> AstNode {
     AstNode::Write(fd as usize, write_data)
 }
 
-pub fn sys_read(parser: &mut Parser) -> AstNode {
+pub fn parse_sys_read(parser: &mut Parser) -> AstNode {
     parser.consume(Token::Syscall("read".to_string()));
 
     parser.consume(Token::ParentOpen);
@@ -52,7 +52,7 @@ pub fn sys_read(parser: &mut Parser) -> AstNode {
     AstNode::Read(fd as usize, buffer)
 }
 
-pub fn sys_exit(parser: &mut Parser) -> AstNode {
+pub fn parse_sys_exit(parser: &mut Parser) -> AstNode {
     parser.consume(Token::Syscall("exit".to_string()));
 
     parser.consume(Token::ParentOpen);
