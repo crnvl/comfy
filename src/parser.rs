@@ -16,6 +16,7 @@ pub enum AstNode {
     Syscall(String, Box<AstNode>),
     Write(usize, Token),
     Read(usize, String),
+    Open(String, usize, usize),
     Exit(Token),
 }
 

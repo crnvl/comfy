@@ -1,7 +1,9 @@
 use crate::{
     parser::AstNode,
     tokenizer::Token,
-    utils::{generate_str_varname, load_syscall_return_value_into_label, store_syscall_return_value},
+    utils::{
+        generate_str_varname, load_syscall_return_value_into_label, store_syscall_return_value,
+    },
 };
 
 pub struct Generator {
@@ -46,10 +48,8 @@ impl Generator {
                 // Declare params in .bss
                 for param in params {
                     if let AstNode::Identifier(param_name, size) = param {
-                        self.bss.push(format!(
-                            ".lcomm {}_{}, {}",
-                            fun_name, param_name, size
-                        ));
+                        self.bss
+                            .push(format!(".lcomm {}_{}, {}", fun_name, param_name, size));
                     }
                 }
 
@@ -87,6 +87,7 @@ impl Generator {
             AstNode::Syscall(name, inner) => match name.as_str() {
                 "write" => self.generate_write(inner),
                 "read" => self.generate_read(inner),
+                "open" => self.generate_open(inner),
                 "exit" => self.generate_exit(inner),
                 _ => panic!("Unknown syscall: {}", name),
             },
@@ -155,8 +156,10 @@ impl Generator {
 
         match code {
             Token::Number(n) => {
-                self.text
-                    .push(format!("\tmov r7, #{}\n\tmov r0, #{}\n\tsvc #0\n", syscall_number, n));
+                self.text.push(format!(
+                    "\tmov r7, #{}\n\tmov r0, #{}\n\tsvc #0\n",
+                    syscall_number, n
+                ));
             }
             Token::Identifier(id) => {
                 self.text.push(format!(
@@ -166,5 +169,29 @@ impl Generator {
             }
             _ => panic!("Unsupported exit code: {:?}", code),
         }
+    }
+
+    fn generate_open(&mut self, inner: &AstNode) {
+        let (path, flags, mode) = match inner {
+            AstNode::Open(path, flags, mode) => (path, flags, mode),
+            _ => panic!("Invalid open syscall inner node"),
+        };
+
+        let syscall_number = 5;
+
+        let var = generate_str_varname();
+        self.rodata.push(format!("{}: .asciz \"{}\"", var, path));
+
+        self.text.push(format!(
+        "\t@ open(\"{}\", {}, {})\n\
+         \tmov r7, #{}\n\
+         \tldr r0, ={}\n\
+         \tmov r1, #{}\n\
+         \tmov r2, #{}\n\
+         \tsvc #0\n",
+         path, flags, mode, syscall_number, var, flags, mode
+        ));
+
+        store_syscall_return_value(&mut self.text);
     }
 }

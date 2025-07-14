@@ -68,3 +68,35 @@ pub fn parse_sys_exit(parser: &mut Parser) -> AstNode {
 
     AstNode::Exit(code)
 }
+
+pub fn parse_sys_open(parser: &mut Parser) -> AstNode {
+    parser.consume(Token::Syscall("open".to_string()));
+
+    parser.consume(Token::ParentOpen);
+
+    let filename = match parser.current_token() {
+        Token::String(s) => s,
+        _ => panic!("Expected filename (string)"),
+    };
+    parser.consume(Token::String(filename.clone()));
+
+    parser.consume(Token::Comma);
+
+    let flags = match parser.current_token() {
+        Token::Number(n) => n,
+        _ => panic!("Expected flags (number)"),
+    };
+    parser.consume(Token::Number(flags));
+
+    parser.consume(Token::Comma);
+
+    let mode = match parser.current_token() {
+        Token::Number(n) => n,
+        _ => panic!("Expected mode (number)"),
+    };
+    parser.consume(Token::Number(mode));
+
+    parser.consume(Token::ParentClose);
+
+    AstNode::Open(filename, flags as usize, mode as usize)
+}

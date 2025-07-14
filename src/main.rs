@@ -56,7 +56,7 @@ fn main() {
     match std::fs::write(&output_file, assembly_code) {
         Ok(_) => println!("Assembly code written to {}", output_file.display()),
         Err(e) => {
-            eprintln!("Error writing to file {}: {}", output_file, e);
+            eprintln!("Error writing to file {}: {}", output_file.display(), e);
             std::process::exit(1);
         }
     }
