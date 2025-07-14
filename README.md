@@ -32,6 +32,37 @@ The following syscalls are currently supported:
 | ---------- | ------------ | ----------------- | ------------------------------ |
 | ✅         | `exit`       | `$exit(status)`   | Terminate the calling process. |
 | ✅         | `write`      | `$write(fd, buf)` | Write to a file descriptor.    |
+| ✅         | `read`       | `$read(fd, buf)`  | Read from a file descriptor.   |
+
+
+## Variables
+
+**comfy** supports simple variable declarations using the `let` keyword. Variables can hold string literals, numbers, or be used to refer to buffers in memory.
+
+### Example
+
+```comfy
+fn main() {
+    let text = "hello!\n";
+    $write(1, text);
+
+    let code = 0;
+    $exit(code);
+}
+```
+
+You can also reference fixed-size buffers using square brackets. This is especially useful for working with `read()` and other syscalls that require writeable memory pointers.
+
+```comfy
+fn main() {
+    let buf[128];          // Declare a 128-byte buffer
+    $read(0, buf);         // Read from stdin into buf
+
+    let code = 0;
+    $exit(code);
+}
+```
+
 
 ## Progress
 
