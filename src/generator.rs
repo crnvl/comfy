@@ -4,12 +4,6 @@ use crate::{
     utils::{generate_str_varname, load_syscall_return_value_into_label, store_syscall_return_value},
 };
 
-pub fn generate(ast: &AstNode) -> Generator {
-    let mut generator = Generator::new();
-    generator.generate(ast);
-    generator
-}
-
 pub struct Generator {
     pub rodata: Vec<String>,
     pub bss: Vec<String>,
@@ -19,7 +13,7 @@ pub struct Generator {
 }
 
 impl Generator {
-    fn new() -> Self {
+    pub fn new() -> Self {
         let mut self_data = Self {
             rodata: Vec::new(),
             bss: Vec::new(),
@@ -31,7 +25,7 @@ impl Generator {
         self_data
     }
 
-    fn generate(&mut self, ast: &AstNode) {
+    pub fn generate(&mut self, ast: &AstNode) {
         match ast {
             AstNode::Program(statements) => {
                 for stmt in statements {
