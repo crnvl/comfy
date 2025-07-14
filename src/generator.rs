@@ -109,7 +109,12 @@ impl Generator {
         };
 
         let syscall_number = 4;
-        let fd_str = fd.to_string();
+
+        let fd_str = match fd {
+            Token::Number(n) => n.to_string(),
+            Token::Identifier(id) => id.clone(),
+            _ => panic!("Unsupported file descriptor type: {:?}", fd),
+        };
 
         match data {
             Token::String(s) => {
@@ -117,10 +122,22 @@ impl Generator {
                 self.rodata.push(format!("{}: .asciz \"{}\"", var, s));
                 self.rodata.push(format!("{}_len = .-{}", var, var));
 
-                self.text.push(format!(
-                    "\tmov r7, #{}\n\tmov r0, #{}\n\tldr r1, ={}\n\tldr r2, ={}_len\n\tsvc #0\n",
-                    syscall_number, fd_str, var, var
-                ));
+                match fd {
+                    Token::Number(n) => {
+                        self.text.push(format!(
+                            "\tmov r7, #{}\n\tmov r0, #{}\n\tldr r1, ={}\n\tldr r2, ={}_len\n\tsvc #0\n",
+                            syscall_number, n, var, var
+                        ));
+                    }
+                    Token::Identifier(id) => {
+                        let label = format!("{}_{}", self.last_fun_name, id);
+                        self.text.push(format!(
+                            "\tmov r7, #{}\n\tldr r0, ={}\n\tldr r0, [r0]\n\tldr r1, ={}\n\tldr r2, ={}_len\n\tsvc #0\n",
+                            syscall_number, label, var, var
+                        ));
+                    }
+                    _ => panic!("Unsupported file descriptor type: {:?}", fd),
+                }
             }
 
             Token::Identifier(id) => {
@@ -133,6 +150,7 @@ impl Generator {
 
             _ => panic!("Unsupported write token: {:?}", data),
         }
+        store_syscall_return_value(&mut self.text);
     }
 
     fn generate_read(&mut self, inner: &AstNode) {

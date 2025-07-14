@@ -1,5 +1,5 @@
 use crate::{
-    syscalls::{parse_sys_exit, parse_sys_write, parse_sys_read},
+    syscalls::{parse_sys_exit, parse_sys_open, parse_sys_read, parse_sys_write},
     tokenizer::Token,
 };
 
@@ -14,7 +14,7 @@ pub enum AstNode {
     
     // syscall wrappers
     Syscall(String, Box<AstNode>),
-    Write(usize, Token),
+    Write(Token, Token),
     Read(usize, String),
     Open(String, usize, usize),
     Exit(Token),
@@ -85,6 +85,7 @@ impl Parser {
             "write" => parse_sys_write(self),
             "read" => parse_sys_read(self),
             "exit" => parse_sys_exit(self),
+            "open" => parse_sys_open(self),
             _ => {
                 panic!("Unknown syscall: {}", syscall);
             }
