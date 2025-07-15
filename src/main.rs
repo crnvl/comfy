@@ -1,11 +1,9 @@
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use crate::{
-    backend::arm32::{self, syscall_mapper::Architecture},
+    backend::{arm32::{self, syscall_mapper::Architecture}, generator::generate},
     extra::config::load_config,
-    backend::generator::generate,
-    frontend::parser::parse,
-    frontend::tokenizer::tokenize,
+    frontend::{parser::parse, preprocessor, tokenizer::tokenize},
 };
 
 mod backend;
@@ -38,17 +36,18 @@ fn main() {
         .output
         .unwrap_or_else(|| format!("build/{}.s", file_stem));
 
-    let verbose = args.get(2).map_or(false, |arg| arg == "--verbose");
-
-    let script = match std::fs::read_to_string(file_path) {
+    let user_paths = vec![PathBuf::from("./src")];
+    let preprocessed_content = match preprocessor::preprocess_file(input_path, &user_paths) {
         Ok(content) => content,
         Err(e) => {
-            eprintln!("Error reading file {}: {}", file_path, e);
+            eprintln!("Error preprocessing file {}: {}", input_path.display(), e);
             std::process::exit(1);
         }
     };
 
-    let tokens = tokenize(&script);
+    let verbose = args.get(2).map_or(false, |arg| arg == "--verbose");
+
+    let tokens = tokenize(&preprocessed_content);
     let ast_nodes = parse(tokens.clone());
     if verbose {
         println!("AST Nodes: {:?}", ast_nodes);
@@ -63,6 +62,7 @@ fn main() {
         generator.section_writer.text,
     );
     if verbose {
+        println!("\nPreprocessed Content:\n\n{}", preprocessed_content);
         println!("Generated Assembly Code:\n{}", assembly_code);
     }
 
