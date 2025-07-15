@@ -90,6 +90,14 @@ impl Generator {
                 self.section_writer.declare_bss_with_len(&label, *size);
             }
 
+            AstNode::InlineAsm(asm_lines) => {
+                self.section_writer.push_text("\t@ ===Inline Assembly===");
+                for line in asm_lines {
+                    self.section_writer.push_text(format!("\t{}", line));
+                }
+                self.section_writer.push_text("\t@ =====================\n");
+            }
+
             AstNode::Syscall(name, inner) => match name.as_str() {
                 "write" => self.generate_write(inner),
                 "read" => self.generate_read(inner),
@@ -122,7 +130,12 @@ impl Generator {
 
                 match fd {
                     Token::Number(n) => {
-                        let instr = syscall_3args(syscall_number, &n.to_string(), &var, &format!("{}_len", var));
+                        let instr = syscall_3args(
+                            syscall_number,
+                            &n.to_string(),
+                            &var,
+                            &format!("{}_len", var),
+                        );
                         self.section_writer.push_text(&instr);
                     }
                     Token::Identifier(id) => {
@@ -142,7 +155,8 @@ impl Generator {
 
             Token::Identifier(id) => {
                 let label = format!("{}_{}", self.last_fun_name, id);
-                let instr = syscall_3args(syscall_number, &fd_str, &label, &format!("{}_len", label));
+                let instr =
+                    syscall_3args(syscall_number, &fd_str, &label, &format!("{}_len", label));
                 self.section_writer.push_text(&instr);
             }
 
