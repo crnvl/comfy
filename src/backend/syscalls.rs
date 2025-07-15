@@ -1,6 +1,6 @@
 use crate::{
-    parser::{AstNode, Parser},
-    tokenizer::Token,
+    frontend::parser::{AstNode, Parser},
+    frontend::tokenizer::Token,
 };
 
 pub fn parse_sys_write(parser: &mut Parser) -> AstNode {
