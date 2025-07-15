@@ -111,3 +111,19 @@ pub fn parse_sys_open(parser: &mut Parser) -> AstNode {
 
     AstNode::Open(filename, flags as usize, mode as usize)
 }
+
+pub fn parse_sys_sysinfo(parser: &mut Parser) -> AstNode {
+    parser.consume(Token::Syscall("sysinfo".to_string()));
+
+    parser.consume(Token::ParentOpen);
+
+    let buffer = match parser.current_token() {
+        Token::Identifier(id) => id,
+        _ => panic!("Expected buffer identifier"),
+    };
+
+    parser.consume(Token::Identifier(buffer.clone()));
+    parser.consume(Token::ParentClose);
+
+    AstNode::Sysinfo(buffer)
+}
