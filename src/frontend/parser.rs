@@ -11,7 +11,8 @@ pub enum AstNode {
     Identifier(String, i32),
     FunctionDefinition(String, Vec<AstNode>, Vec<AstNode>),
     VariableDeclaration(String, Box<AstNode>),
-    
+    InlineAsm(Vec<String>),
+
     // syscall wrappers
     Syscall(String, Box<AstNode>),
     Write(Token, Token),
@@ -106,7 +107,10 @@ impl Parser {
         let value: AstNode = match self.current_token() {
             Token::Number(_) | Token::String(_) => self.parse_datatype(),
             Token::Syscall(sys) => self.parse_syscall(sys),
-            _ => panic!("Unsupported value in variable declaration: {:?}", self.current_token()),
+            _ => panic!(
+                "Unsupported value in variable declaration: {:?}",
+                self.current_token()
+            ),
         };
 
         self.consume(Token::Semicolon);
@@ -138,18 +142,18 @@ impl Parser {
         AstNode::Identifier(identifier, size)
     }
 
-
     fn parse_statement(&mut self) -> AstNode {
         let ast_node = match self.current_token() {
             Token::Function => self.parse_function_definition(),
-            Token::Syscall(syscall) => { 
+            Token::Syscall(syscall) => {
                 let node = self.parse_syscall(syscall);
-                
+
                 self.consume(Token::Semicolon);
                 node
-            },
+            }
             Token::Let => self.parse_variable_declaration(),
             Token::Buf => self.parse_buffer_declaration(),
+            Token::InlineAsm => self.parse_inline_asm(),
             _ => {
                 panic!("Expected a statement, found: {:?}", self.current_token())
             }
@@ -184,6 +188,33 @@ impl Parser {
                 )
             }
         }
+    }
+
+    fn parse_inline_asm(&mut self) -> AstNode {
+        self.consume(Token::InlineAsm);
+        self.consume(Token::CurlyOpen);
+
+        let mut asm_lines = Vec::new();
+
+        while self.current_token() != Token::CurlyClose && self.current_token() != Token::EOF {
+            if let Token::String(ref line) = self.current_token() {
+                asm_lines.push(line.clone());
+                self.consume(Token::String(line.clone()));
+                if self.current_token() == Token::Comma {
+                    self.consume(Token::Comma);
+                }
+            } else {
+                panic!(
+                    "Expected string in inline asm block, found: {:?}",
+                    self.current_token()
+                );
+            }
+        }
+
+        self.consume(Token::CurlyClose);
+        self.consume(Token::Semicolon);
+
+        AstNode::InlineAsm(asm_lines)
     }
 
     fn consume_sized_identifier(&mut self) -> AstNode {
