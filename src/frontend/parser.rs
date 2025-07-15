@@ -1,6 +1,6 @@
 use crate::{
-    syscalls::{parse_sys_exit, parse_sys_open, parse_sys_read, parse_sys_write},
-    tokenizer::Token,
+    backend::syscalls::{parse_sys_exit, parse_sys_write, parse_sys_read, parse_sys_open},
+    frontend::tokenizer::Token,
 };
 
 #[derive(Debug)]

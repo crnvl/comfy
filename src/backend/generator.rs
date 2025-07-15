@@ -1,35 +1,38 @@
 use crate::{
-    parser::AstNode,
-    tokenizer::Token,
-    utils::{
-        generate_str_varname, load_syscall_return_value_into_label, store_syscall_return_value,
+    backend::arm32::{
+        asm::{
+            load_syscall_return_value_into_label, store_syscall_return_value, syscall_1arg,
+            syscall_2args, syscall_3args,
+        },
+        section,
+        syscall_mapper::{Architecture, get_syscall_num_or_panic},
     },
+    extra::utils::generate_str_varname,
+    frontend::parser::AstNode,
+    frontend::tokenizer::Token,
 };
 
 pub struct Generator {
-    pub rodata: Vec<String>,
-    pub bss: Vec<String>,
-    pub text: Vec<String>,
-
+    pub section_writer: section::SectionWriter,
     last_fun_name: String,
+    arch: Architecture,
 }
 
-pub fn generate(ast_nodes: &AstNode) -> Generator {
-    let mut generator = Generator::new();
+pub fn generate(ast_nodes: &AstNode, arch: Architecture) -> Generator {
+    let mut generator = Generator::new(arch);
     generator.generate(ast_nodes);
     generator
 }
 
 impl Generator {
-    pub fn new() -> Self {
-        let mut self_data = Self {
-            rodata: Vec::new(),
-            bss: Vec::new(),
-            text: Vec::new(),
+    pub fn new(arch: Architecture) -> Self {
+        let self_data = Self {
+            section_writer: section::SectionWriter::new(),
             last_fun_name: String::new(),
+            arch,
         };
 
-        self_data.text.push(".global _start".to_string());
+        (".global _start".to_string());
         self_data
     }
 
@@ -49,13 +52,13 @@ impl Generator {
                 };
 
                 self.last_fun_name = fun_name.clone();
-                self.text.push(format!("{}:", fun_name));
+                self.section_writer.push_text(format!("{}:", fun_name));
 
                 // Declare params in .bss
                 for param in params {
                     if let AstNode::Identifier(param_name, size) = param {
-                        self.bss
-                            .push(format!(".lcomm {}_{}, {}", fun_name, param_name, size));
+                        self.section_writer
+                            .declare_bss_with_name_prefix(&fun_name, param_name, *size);
                     }
                 }
 
@@ -69,16 +72,15 @@ impl Generator {
 
                 match &**value {
                     AstNode::Number(n) => {
-                        self.rodata.push(format!("{}: .word {}", label, n));
+                        self.section_writer.push_rodata_word(&label, *n);
                     }
                     AstNode::String(s) => {
-                        self.rodata.push(format!("{}: .asciz \"{}\"", label, s));
-                        self.rodata.push(format!("{}_len = .-{}", label, label));
+                        self.section_writer.push_rodata_str_with_len(&label, s);
                     }
                     AstNode::Syscall(_, _) => {
-                        self.bss.push(format!(".lcomm {}, 4", label));
+                        self.section_writer.declare_bss(&label, 4);
                         self.generate(value);
-                        load_syscall_return_value_into_label(&mut self.text, &label);
+                        load_syscall_return_value_into_label(&mut self.section_writer.text, &label);
                     }
                     _ => panic!("Unsupported variable declaration value: {:?}", value),
                 }
@@ -86,8 +88,7 @@ impl Generator {
 
             AstNode::Identifier(name, size) => {
                 let label = format!("{}_{}", self.last_fun_name, name);
-                self.bss.push(format!(".lcomm {}, {}", label, size));
-                self.bss.push(format!("{}_len = {}", label, size));
+                self.section_writer.declare_bss_with_len(&label, *size);
             }
 
             AstNode::Syscall(name, inner) => match name.as_str() {
@@ -108,8 +109,7 @@ impl Generator {
             _ => panic!("Invalid write syscall inner node"),
         };
 
-        let syscall_number = 4;
-
+        let syscall_number: u32 = get_syscall_num_or_panic(self.arch, "write");
         let fd_str = match fd {
             Token::Number(n) => n.to_string(),
             Token::Identifier(id) => id.clone(),
@@ -119,19 +119,20 @@ impl Generator {
         match data {
             Token::String(s) => {
                 let var = generate_str_varname();
-                self.rodata.push(format!("{}: .asciz \"{}\"", var, s));
-                self.rodata.push(format!("{}_len = .-{}", var, var));
+                self.section_writer.push_rodata_str_with_len(&var, s);
 
                 match fd {
                     Token::Number(n) => {
-                        self.text.push(format!(
-                            "\tmov r7, #{}\n\tmov r0, #{}\n\tldr r1, ={}\n\tldr r2, ={}_len\n\tsvc #0\n",
-                            syscall_number, n, var, var
-                        ));
+                        let instr = syscall_3args(syscall_number, &n.to_string(), &var, &format!("{}_len", var));
+                        self.section_writer.push_text(&instr);
                     }
                     Token::Identifier(id) => {
                         let label = format!("{}_{}", self.last_fun_name, id);
-                        self.text.push(format!(
+
+                        // !! Exception: Inline asm for simplicity and since we need
+                        // to load the value into a register from a label
+                        // TODO: Refactor this to use a more generic approach
+                        self.section_writer.push_text(format!(
                             "\tmov r7, #{}\n\tldr r0, ={}\n\tldr r0, [r0]\n\tldr r1, ={}\n\tldr r2, ={}_len\n\tsvc #0\n",
                             syscall_number, label, var, var
                         ));
@@ -142,15 +143,13 @@ impl Generator {
 
             Token::Identifier(id) => {
                 let label = format!("{}_{}", self.last_fun_name, id);
-                self.text.push(format!(
-                    "\tmov r7, #{}\n\tmov r0, #{}\n\tldr r1, ={}\n\tldr r2, ={}_len\n\tsvc #0\n",
-                    syscall_number, fd_str, label, label
-                ));
+                let instr = syscall_3args(syscall_number, &fd_str, &label, &format!("{}_len", label));
+                self.section_writer.push_text(&instr);
             }
 
             _ => panic!("Unsupported write token: {:?}", data),
         }
-        store_syscall_return_value(&mut self.text);
+        store_syscall_return_value(&mut self.section_writer.text);
     }
 
     fn generate_read(&mut self, inner: &AstNode) {
@@ -159,15 +158,14 @@ impl Generator {
             _ => panic!("Invalid read syscall inner node"),
         };
 
-        let syscall_number = 3;
+        let syscall_number = get_syscall_num_or_panic(self.arch, "read");
         let fd_str = fd.to_string();
         let label = format!("{}_{}", self.last_fun_name, buffer);
 
-        self.text.push(format!(
-            "\tmov r7, #{}\n\tmov r0, #{}\n\tldr r1, ={}\n\tsvc #0\n",
-            syscall_number, fd_str, label
-        ));
-        store_syscall_return_value(&mut self.text);
+        let instr = syscall_2args(syscall_number, &fd_str, &label);
+        self.section_writer.push_text(&instr);
+
+        store_syscall_return_value(&mut self.section_writer.text);
     }
 
     fn generate_exit(&mut self, inner: &AstNode) {
@@ -176,23 +174,15 @@ impl Generator {
             _ => panic!("Invalid exit syscall inner node"),
         };
 
-        let syscall_number = 1;
+        let syscall_number = get_syscall_num_or_panic(self.arch, "exit");
 
-        match code {
-            Token::Number(n) => {
-                self.text.push(format!(
-                    "\tmov r7, #{}\n\tmov r0, #{}\n\tsvc #0\n",
-                    syscall_number, n
-                ));
-            }
-            Token::Identifier(id) => {
-                self.text.push(format!(
-                    "\tmov r7, #{}\n\tldr r0, ={}\n\tsvc #0\n",
-                    syscall_number, id
-                ));
-            }
+        let asm = match code {
+            Token::Number(n) => syscall_1arg(syscall_number, &n.to_string()),
+            Token::Identifier(id) => syscall_1arg(syscall_number, &id),
             _ => panic!("Unsupported exit code: {:?}", code),
-        }
+        };
+
+        self.section_writer.push_text(&asm);
     }
 
     fn generate_open(&mut self, inner: &AstNode) {
@@ -201,21 +191,17 @@ impl Generator {
             _ => panic!("Invalid open syscall inner node"),
         };
 
-        let syscall_number = 5;
+        let syscall_number = get_syscall_num_or_panic(self.arch, "open");
 
         let var = generate_str_varname();
-        self.rodata.push(format!("{}: .asciz \"{}\"", var, path));
+        self.section_writer.push_rodata_str_with_len(&var, path);
 
-        self.text.push(format!(
-        "\t@ open(\"{}\", {}, {})\n\
-         \tmov r7, #{}\n\
-         \tldr r0, ={}\n\
-         \tmov r1, #{}\n\
-         \tmov r2, #{}\n\
-         \tsvc #0\n",
-         path, flags, mode, syscall_number, var, flags, mode
-        ));
+        let flags_str = flags.to_string();
+        let mode_str = mode.to_string();
 
-        store_syscall_return_value(&mut self.text);
+        let instr = syscall_3args(syscall_number, &var, &flags_str, &mode_str);
+        self.section_writer.push_text(&instr);
+
+        store_syscall_return_value(&mut self.section_writer.text);
     }
 }
