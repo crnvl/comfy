@@ -4,6 +4,12 @@ use crate::{
 };
 
 #[derive(Debug)]
+pub enum FileDescriptor {
+    Number(usize),
+    Identifier(String),
+}
+
+#[derive(Debug)]
 pub enum AstNode {
     Program(Vec<AstNode>),
     Number(i32),
@@ -12,7 +18,7 @@ pub enum AstNode {
     FunctionDefinition(String, Vec<AstNode>, Vec<AstNode>),
 
     // syscall wrappers
-    Write(usize, String),
+    Write(FileDescriptor, String),
     Exit(i32),
 }
 

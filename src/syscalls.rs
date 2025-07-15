@@ -1,5 +1,5 @@
 use crate::{
-    parser::{AstNode, Parser},
+    parser::{AstNode, FileDescriptor, Parser},
     tokenizer::Token,
 };
 
@@ -9,10 +9,16 @@ pub fn sys_write(parser: &mut Parser) -> AstNode {
     parser.consume(Token::ParentOpen);
 
     let fd = match parser.current_token() {
-        Token::Number(n) => n,
-        _ => panic!("Expected file descriptor (number)"),
+        Token::Number(n) => {
+            parser.consume(Token::Number(n));
+            FileDescriptor::Number(n as usize)
+        }
+        Token::Identifier(id) => {
+            parser.consume(Token::Identifier(id.clone()));
+            FileDescriptor::Identifier(id)
+        }
+        _ => panic!("Expected file descriptor (number or identifier)"),
     };
-    parser.consume(Token::Number(fd));
 
     parser.consume(Token::Comma);
 
@@ -26,7 +32,7 @@ pub fn sys_write(parser: &mut Parser) -> AstNode {
 
     parser.consume(Token::Semicolon);
 
-    AstNode::Write(fd as usize, string)
+    AstNode::Write(fd, string)
 }
 
 pub fn sys_exit(parser: &mut Parser) -> AstNode {
