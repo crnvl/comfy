@@ -70,6 +70,7 @@ The following syscalls are currently supported or next in development:
 | ✅ | 3 | `read` | `$read(fd, buf)` | Read from a file descriptor. | Number of bytes read, or -1 on error.|
 | ✅ | 4 | `write` | `$write(fd, buf)` | Write to a file descriptor. | Number of bytes written, or -1 on error.|
 | ✅  | 5 | `open` | `$open(path, flags)` | Open a file. | File descriptor, or -1 on error. |
+| ✅  | 143 | `sysinfo` | `$sysinfo(buf)` | Get system information. | 0 on success, -1 on error. |
 
   
   

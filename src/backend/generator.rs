@@ -95,6 +95,7 @@ impl Generator {
                 "read" => self.generate_read(inner),
                 "open" => self.generate_open(inner),
                 "exit" => self.generate_exit(inner),
+                "sysinfo" => self.generate_sysinfo(inner),
                 _ => panic!("Unknown syscall: {}", name),
             },
 
@@ -199,6 +200,21 @@ impl Generator {
         let mode_str = mode.to_string();
 
         let instr = syscall_3args(syscall_number, &var, &flags_str, &mode_str);
+        self.section_writer.push_text(&instr);
+
+        store_syscall_return_value(&mut self.section_writer.text);
+    }
+
+    fn generate_sysinfo(&mut self, inner: &AstNode) {
+        let buffer = match inner {
+            AstNode::Sysinfo(buffer) => buffer,
+            _ => panic!("Invalid sysinfo syscall inner node"),
+        };
+
+        let syscall_number = get_syscall_num_or_panic(self.arch, "sysinfo");
+        let label = format!("{}_{}", self.last_fun_name, buffer);
+
+        let instr = syscall_1arg(syscall_number, &label);
         self.section_writer.push_text(&instr);
 
         store_syscall_return_value(&mut self.section_writer.text);

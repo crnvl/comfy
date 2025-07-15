@@ -1,5 +1,5 @@
 use crate::{
-    backend::syscalls::{parse_sys_exit, parse_sys_write, parse_sys_read, parse_sys_open},
+    backend::syscalls::{parse_sys_exit, parse_sys_write, parse_sys_read, parse_sys_open, parse_sys_sysinfo},
     frontend::tokenizer::Token,
 };
 
@@ -18,6 +18,7 @@ pub enum AstNode {
     Read(usize, String),
     Open(String, usize, usize),
     Exit(Token),
+    Sysinfo(String),
 }
 
 pub fn parse(tokens: Vec<Token>) -> AstNode {
@@ -86,6 +87,7 @@ impl Parser {
             "read" => parse_sys_read(self),
             "exit" => parse_sys_exit(self),
             "open" => parse_sys_open(self),
+            "sysinfo" => parse_sys_sysinfo(self),
             _ => {
                 panic!("Unknown syscall: {}", syscall);
             }
