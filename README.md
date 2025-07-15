@@ -29,21 +29,11 @@
   
 
 ```
-
 fn main() {
-
-$write(1, "hello comfy!\n");
-
-  
-
-let hello_text = ":3\n";
-
-$write(1, hello_text);
-
-  
-
-$exit(703);
-
+  $write(1, "hello comfy!\n");
+  let hello_text = ":3\n";
+  $write(1, hello_text);
+  $exit(703);
 }
 
 ```
@@ -88,21 +78,12 @@ The following syscalls are currently supported or next in development:
   
 
 ```comfy
-
 fn main() {
-
-let text = "hello!\n";
-
-$write(1, text);
-
-  
-
-let code = 0;
-
-$exit(code);
-
+  let text = "hello!\n";
+  $write(1, text);
+  let code = 0;
+  $exit(code);
 }
-
 ```
 
   
@@ -112,19 +93,11 @@ You can also reference fixed-size buffers using square brackets. This is especia
   
 
 ```comfy
-
 fn main() {
-
-buf[128] comfySpace; // Declare a 128-byte buffer
-
-let inputSize = $read(0, comfySpace); // Read from stdin into comfySpace and return the amount of bytes read
-
-  
-
-let code = 0;
-
-$exit(code);
-
+  buf[128] comfySpace; // Declare a 128-byte buffer
+  let inputSize = $read(0, comfySpace); // Read from stdin into comfySpace and return the amount of bytes read
+  let code = 0;
+  $exit(code);
 }
 
 ```
