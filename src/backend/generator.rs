@@ -55,7 +55,7 @@ impl Generator {
 
                 // Declare params in .bss
                 for param in params {
-                    if let AstNode::Identifier(param_name, size) = param {
+                    if let AstNode::IdentifierWithSize(param_name, size) = param {
                         self.section_writer
                             .declare_bss_with_name_prefix(&fun_name, param_name, *size);
                     }
@@ -85,7 +85,7 @@ impl Generator {
                 }
             }
 
-            AstNode::Identifier(name, size) => {
+            AstNode::IdentifierWithSize(name, size) => {
                 let label = format!("{}_{}", self.last_fun_name, name);
                 self.section_writer.declare_bss_with_len(&label, *size);
             }

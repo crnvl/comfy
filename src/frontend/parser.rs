@@ -6,9 +6,8 @@ use crate::{
 #[derive(Debug)]
 pub enum AstNode {
     Program(Vec<AstNode>),
-    Number(i32),
-    String(String),
-    Identifier(String, i32),
+    Identifier(String),
+    Type(Token),
     FunctionDefinition(String, Vec<AstNode>, Vec<AstNode>),
     VariableDeclaration(String, Box<AstNode>),
     InlineAsm(Vec<String>),
@@ -20,6 +19,11 @@ pub enum AstNode {
     Open(String, usize, usize),
     Exit(Token),
     Sysinfo(String),
+
+    // deprecated
+    IdentifierWithSize(String, i32),
+    Number(i32),
+    String(String),
 }
 
 pub fn parse(tokens: Vec<Token>) -> AstNode {
@@ -98,14 +102,19 @@ impl Parser {
     }
 
     fn parse_variable_declaration(&mut self) -> AstNode {
-        self.consume(Token::Let);
+        let var_type = self.current_token();
 
         let identifier = self.consume_identifier();
 
         self.consume(Token::Equals);
 
         let value: AstNode = match self.current_token() {
-            Token::Number(_) | Token::String(_) => self.parse_datatype(),
+            Token::Bool(_)
+            | Token::Char(_)
+            | Token::Int8(_)
+            | Token::Int16(_)
+            | Token::Int32(_)
+            | Token::Str(_) => self.parse_datatype(),
             Token::Syscall(sys) => self.parse_syscall(sys),
             _ => panic!(
                 "Unsupported value in variable declaration: {:?}",
@@ -118,30 +127,6 @@ impl Parser {
         AstNode::VariableDeclaration(identifier, Box::new(value))
     }
 
-    fn parse_buffer_declaration(&mut self) -> AstNode {
-        self.consume(Token::Buf);
-        self.consume(Token::BracketOpen);
-
-        let bufsize_token = self.current_token();
-        let size = if let Token::Number(n) = bufsize_token {
-            self.consume(bufsize_token.clone());
-            n
-        } else {
-            panic!(
-                "Expected a number for buffer size, found: {:?}",
-                bufsize_token
-            );
-        };
-
-        self.consume(Token::BracketClose);
-
-        let identifier = self.consume_identifier();
-
-        self.consume(Token::Semicolon);
-
-        AstNode::Identifier(identifier, size)
-    }
-
     fn parse_statement(&mut self) -> AstNode {
         let ast_node = match self.current_token() {
             Token::Function => self.parse_function_definition(),
@@ -151,8 +136,12 @@ impl Parser {
                 self.consume(Token::Semicolon);
                 node
             }
-            Token::Let => self.parse_variable_declaration(),
-            Token::Buf => self.parse_buffer_declaration(),
+            Token::TypeDefBool
+            | Token::TypeDefChar
+            | Token::TypeDefStr
+            | Token::TypeDefInt8
+            | Token::TypeDefInt16
+            | Token::TypeDefInt32 => self.parse_variable_declaration(),
             Token::InlineAsm => self.parse_inline_asm(),
             _ => {
                 panic!("Expected a statement, found: {:?}", self.current_token())
@@ -164,13 +153,29 @@ impl Parser {
 
     fn parse_datatype(&mut self) -> AstNode {
         match self.current_token() {
-            Token::Number(number) => {
-                self.consume(Token::Number(number));
-                AstNode::Number(number)
+            Token::Bool(value) => {
+                self.consume(Token::Bool(value));
+                AstNode::Type(Token::Bool(value))
             }
-            Token::String(string) => {
-                self.consume(Token::String(string.clone()));
-                AstNode::String(string.clone())
+            Token::Char(value) => {
+                self.consume(Token::Char(value));
+                AstNode::Type(Token::Char(value))
+            }
+            Token::Int8(value) => {
+                self.consume(Token::Int8(value));
+                AstNode::Type(Token::Int8(value))
+            }
+            Token::Int16(value) => {
+                self.consume(Token::Int16(value));
+                AstNode::Type(Token::Int16(value))
+            }
+            Token::Int32(value) => {
+                self.consume(Token::Int32(value));
+                AstNode::Type(Token::Int32(value))
+            }
+            Token::Str(value) => {
+                self.consume(Token::Str(value.clone()));
+                AstNode::Type(Token::Str(value))
             }
             _ => {
                 panic!("Expected a datatype, found: {:?}", self.current_token())
@@ -179,15 +184,23 @@ impl Parser {
     }
 
     fn parse_parameter(&mut self) -> AstNode {
-        match self.current_token() {
-            Token::Identifier(_) => self.consume_sized_identifier(),
-            _ => {
-                panic!(
-                    "Expected a parameter identifier, found: {:?}",
-                    self.current_token()
-                )
-            }
+        let param_type = self.current_token();
+
+        let identifier = self.consume_identifier();
+
+        if param_type == Token::TypeDefBool
+            || param_type == Token::TypeDefChar
+            || param_type == Token::TypeDefStr
+            || param_type == Token::TypeDefInt8
+            || param_type == Token::TypeDefInt16
+            || param_type == Token::TypeDefInt32
+        {
+            self.consume(param_type);
+        } else {
+            panic!("Expected a type definition for parameter, found: {:?}", param_type);
         }
+
+        AstNode::Identifier(identifier)
     }
 
     fn parse_inline_asm(&mut self) -> AstNode {
@@ -197,9 +210,9 @@ impl Parser {
         let mut asm_lines = Vec::new();
 
         while self.current_token() != Token::CurlyClose && self.current_token() != Token::EOF {
-            if let Token::String(ref line) = self.current_token() {
+            if let Token::Str(ref line) = self.current_token() {
                 asm_lines.push(line.clone());
-                self.consume(Token::String(line.clone()));
+                self.consume(Token::Str(line.clone()));
                 if self.current_token() == Token::Comma {
                     self.consume(Token::Comma);
                 }
@@ -215,24 +228,6 @@ impl Parser {
         self.consume(Token::Semicolon);
 
         AstNode::InlineAsm(asm_lines)
-    }
-
-    fn consume_sized_identifier(&mut self) -> AstNode {
-        let identifier = self.consume_identifier();
-
-        self.consume(Token::Colon);
-
-        let size = if let Token::Number(size) = self.current_token() {
-            self.consume(Token::Number(size));
-            size
-        } else {
-            panic!(
-                "Expected size after identifier, found: {:?}",
-                self.current_token()
-            );
-        };
-
-        AstNode::Identifier(identifier, size)
     }
 
     fn consume_identifier(&mut self) -> String {
