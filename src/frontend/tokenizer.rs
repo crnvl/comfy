@@ -18,6 +18,7 @@ pub enum Token {
     Buf,
     BracketOpen,
     BracketClose,
+    InlineAsm,
 
     EOF, // End of File
     Unknown,
@@ -81,6 +82,7 @@ pub fn tokenize(script: &str) -> Vec<Token> {
                     "fn" => tokens.push(Token::Function),
                     "let" => tokens.push(Token::Let),
                     "buf" => tokens.push(Token::Buf),
+                    "asm" => tokens.push(Token::InlineAsm),
                     _ => tokens.push(Token::Identifier(identifier)),
                 }
             }
