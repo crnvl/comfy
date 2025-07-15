@@ -1,6 +1,6 @@
 use crate::{
-    syscalls::{sys_exit, sys_write},
-    tokenizer::Token,
+    backend::syscalls::{parse_sys_exit, parse_sys_write, parse_sys_read, parse_sys_open},
+    frontend::tokenizer::Token,
 };
 
 #[derive(Debug)]
@@ -10,10 +10,14 @@ pub enum AstNode {
     String(String),
     Identifier(String, i32),
     FunctionDefinition(String, Vec<AstNode>, Vec<AstNode>),
-
+    VariableDeclaration(String, Box<AstNode>),
+    
     // syscall wrappers
-    Write(usize, String),
-    Exit(i32),
+    Syscall(String, Box<AstNode>),
+    Write(Token, Token),
+    Read(usize, String),
+    Open(String, usize, usize),
+    Exit(Token),
 }
 
 pub fn parse(tokens: Vec<Token>) -> AstNode {
@@ -77,23 +81,79 @@ impl Parser {
     }
 
     fn parse_syscall(&mut self, syscall: String) -> AstNode {
-        match syscall.as_str() {
-            "write" => sys_write(self),
-            "exit" => sys_exit(self),
+        let matched_syscall = match syscall.as_str() {
+            "write" => parse_sys_write(self),
+            "read" => parse_sys_read(self),
+            "exit" => parse_sys_exit(self),
+            "open" => parse_sys_open(self),
             _ => {
                 panic!("Unknown syscall: {}", syscall);
             }
-        }
+        };
+
+        AstNode::Syscall(syscall, Box::new(matched_syscall))
     }
 
+    fn parse_variable_declaration(&mut self) -> AstNode {
+        self.consume(Token::Let);
+
+        let identifier = self.consume_identifier();
+
+        self.consume(Token::Equals);
+
+        let value: AstNode = match self.current_token() {
+            Token::Number(_) | Token::String(_) => self.parse_datatype(),
+            Token::Syscall(sys) => self.parse_syscall(sys),
+            _ => panic!("Unsupported value in variable declaration: {:?}", self.current_token()),
+        };
+
+        self.consume(Token::Semicolon);
+
+        AstNode::VariableDeclaration(identifier, Box::new(value))
+    }
+
+    fn parse_buffer_declaration(&mut self) -> AstNode {
+        self.consume(Token::Buf);
+        self.consume(Token::BracketOpen);
+
+        let bufsize_token = self.current_token();
+        let size = if let Token::Number(n) = bufsize_token {
+            self.consume(bufsize_token.clone());
+            n
+        } else {
+            panic!(
+                "Expected a number for buffer size, found: {:?}",
+                bufsize_token
+            );
+        };
+
+        self.consume(Token::BracketClose);
+
+        let identifier = self.consume_identifier();
+
+        self.consume(Token::Semicolon);
+
+        AstNode::Identifier(identifier, size)
+    }
+
+
     fn parse_statement(&mut self) -> AstNode {
-        match self.current_token() {
+        let ast_node = match self.current_token() {
             Token::Function => self.parse_function_definition(),
-            Token::Syscall(syscall) => self.parse_syscall(syscall),
+            Token::Syscall(syscall) => { 
+                let node = self.parse_syscall(syscall);
+                
+                self.consume(Token::Semicolon);
+                node
+            },
+            Token::Let => self.parse_variable_declaration(),
+            Token::Buf => self.parse_buffer_declaration(),
             _ => {
                 panic!("Expected a statement, found: {:?}", self.current_token())
             }
-        }
+        };
+
+        ast_node
     }
 
     fn parse_datatype(&mut self) -> AstNode {
@@ -114,7 +174,7 @@ impl Parser {
 
     fn parse_parameter(&mut self) -> AstNode {
         match self.current_token() {
-            Token::Identifier(id) => self.consume_sized_identifier(id),
+            Token::Identifier(_) => self.consume_sized_identifier(),
             _ => {
                 panic!(
                     "Expected a parameter identifier, found: {:?}",
@@ -124,7 +184,7 @@ impl Parser {
         }
     }
 
-    fn consume_sized_identifier(&mut self, id: String) -> AstNode {
+    fn consume_sized_identifier(&mut self) -> AstNode {
         let identifier = self.consume_identifier();
 
         self.consume(Token::Colon);
