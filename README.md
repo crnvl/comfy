@@ -65,7 +65,7 @@ The following syscalls are currently supported or next in development:
   
 
 | Supported? | Syscall # | Syscall Name | Wrapper Function | Description | Return Value |
-|------------|-----------|--------------|------------------|-------------|--------------|
+| --- | --- | --- | --- | --- | --- |
 | ✅ | 1 | `exit` | `$exit(status)` | Terminate the calling process. | Does not return. |
 | ✅ | 3 | `read` | `$read(fd, buf)` | Read from a file descriptor. | Number of bytes read, or -1 on error.|
 | ✅ | 4 | `write` | `$write(fd, buf)` | Write to a file descriptor. | Number of bytes written, or -1 on error.|
