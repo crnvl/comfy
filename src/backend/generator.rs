@@ -32,7 +32,7 @@ impl Generator {
             arch,
         };
 
-        (".global _start".to_string());
+        self_data.section_writer.push_text(".global _start".to_string());
         self_data
     }
 
