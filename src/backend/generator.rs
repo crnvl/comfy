@@ -119,18 +119,18 @@ impl Generator {
 
         let syscall_number: u32 = get_syscall_num_or_panic(self.arch, "write");
         let fd_str = match fd {
-            Token::Number(n) => n.to_string(),
+            Token::Int32Container(n) => n.to_string(),
             Token::Identifier(id) => id.clone(),
             _ => panic!("Unsupported file descriptor type: {:?}", fd),
         };
 
         match data {
-            Token::String(s) => {
+            Token::StrContainer(s) => {
                 let var = generate_str_varname();
                 self.section_writer.push_rodata_str_with_len(&var, s);
 
                 match fd {
-                    Token::Number(n) => {
+                    Token::Int32Container(n) => {
                         let instr = syscall_3args(
                             syscall_number,
                             &n.to_string(),
@@ -191,7 +191,7 @@ impl Generator {
         let syscall_number = get_syscall_num_or_panic(self.arch, "exit");
 
         let asm = match code {
-            Token::Number(n) => syscall_1arg(syscall_number, &n.to_string()),
+            Token::Int32Container(n) => syscall_1arg(syscall_number, &n.to_string()),
             Token::Identifier(id) => syscall_1arg(syscall_number, &id),
             _ => panic!("Unsupported exit code: {:?}", code),
         };
