@@ -8,7 +8,7 @@ pub enum AstNode {
     Program(Vec<AstNode>),
     Identifier(String, Token),
     FunctionDefinition(String, Vec<AstNode>, Vec<AstNode>),
-    VariableDeclaration(String, Box<AstNode>),
+    VariableDeclaration(String, Box<AstNode>, Token),
     VariableBufferDeclaration(String, Token),
     InlineAsm(Vec<String>),
 
@@ -138,7 +138,7 @@ impl Parser {
 
         self.consume(Token::Semicolon);
 
-        AstNode::VariableDeclaration(identifier, Box::new(value))
+        AstNode::VariableDeclaration(identifier, Box::new(value), var_type)
     }
 
     fn parse_statement(&mut self) -> AstNode {

@@ -66,7 +66,7 @@ impl Generator {
                 }
             }
 
-            AstNode::VariableDeclaration(name, value) => {
+            AstNode::VariableDeclaration(name, value, _) => { // TODO: handle var_type
                 let label = format!("{}_{}", self.last_fun_name, name);
 
                 match &**value {

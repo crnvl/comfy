@@ -26,3 +26,7 @@ pub fn generate_str_varname() -> String {
     name.push_str(&generate_random_alphanumeric_string(8));
     name
 }
+
+pub fn get_bytes_from_type() {
+    // TODO: 
+}
