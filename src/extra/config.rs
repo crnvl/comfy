@@ -1,3 +1,4 @@
+
 use serde::Deserialize;
 
 #[allow(dead_code)]
@@ -5,6 +6,7 @@ use serde::Deserialize;
 pub struct ProjectConfig {
     pub target: TargetSection,
     pub meta: Option<MetaSection>,
+    pub logging: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]

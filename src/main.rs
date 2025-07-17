@@ -11,7 +11,9 @@ mod extra;
 mod frontend;
 
 fn main() {
-    let config = load_config("project.comfx");
+    let config_file = PathBuf::from("project.comfx");
+    let config = load_config(config_file.to_str().unwrap());
+
     let args: Vec<String> = std::env::args().collect();
 
     if args.len() < 2 {
@@ -37,7 +39,9 @@ fn main() {
         .unwrap_or_else(|| format!("build/{}.s", file_stem));
 
     let user_paths = vec![PathBuf::from("./src")];
-    let preprocessed_content = match preprocessor::preprocess_file(input_path, &user_paths) {
+    let empty_defines = std::collections::HashMap::new();
+    let defines_ref = config.logging.as_ref().unwrap_or(&"false".to_string());
+    let preprocessed_content = match preprocessor::preprocess_file(input_path, &user_paths, &empty_defines) {
         Ok(content) => content,
         Err(e) => {
             eprintln!("Error preprocessing file {}: {}", input_path.display(), e);

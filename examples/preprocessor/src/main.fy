@@ -5,6 +5,10 @@
 fn main() {
     $write(1, "hello comfy!\n");
 
+    #if ENABLE_LOGGING
+        $write(1, "Logging enabled!\n");
+    #endif
+
     let hello_text = ":3\n";
     $write(1, hello_text);
 
