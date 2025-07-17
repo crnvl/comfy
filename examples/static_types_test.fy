@@ -14,3 +14,12 @@ fn main() {
     str m = "hello";
     str n = "";
 }
+
+fn meow(bool arg1, int8 arg2) {
+    bool a;
+    int8 b;
+    int16 c;
+    int32 d;
+    char e;
+    str f;
+}

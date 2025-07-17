@@ -6,9 +6,10 @@ use crate::{
 #[derive(Debug)]
 pub enum AstNode {
     Program(Vec<AstNode>),
-    Identifier(String),
+    Identifier(String, Token),
     FunctionDefinition(String, Vec<AstNode>, Vec<AstNode>),
     VariableDeclaration(String, Box<AstNode>),
+    VariableBufferDeclaration(String, Token),
     InlineAsm(Vec<String>),
 
     // syscall wrappers
@@ -113,6 +114,11 @@ impl Parser {
         self.consume(var_type.clone());
 
         let identifier = self.consume_identifier();
+
+        if self.current_token() == Token::Semicolon {
+            self.consume(Token::Semicolon);
+            return AstNode::VariableBufferDeclaration(identifier, var_type)
+        }
 
         self.consume(Token::Equals);
 
@@ -262,8 +268,6 @@ impl Parser {
     fn parse_parameter(&mut self) -> AstNode {
         let param_type = self.current_token();
 
-        let identifier = self.consume_identifier();
-
         if param_type == Token::Bool
             || param_type == Token::Char
             || param_type == Token::Str
@@ -271,7 +275,7 @@ impl Parser {
             || param_type == Token::Int16
             || param_type == Token::Int32
         {
-            self.consume(param_type);
+            self.consume(param_type.clone());
         } else {
             panic!(
                 "Expected a type definition for parameter, found: {:?}",
@@ -279,7 +283,9 @@ impl Parser {
             );
         }
 
-        AstNode::Identifier(identifier)
+        let identifier = self.consume_identifier();
+
+        AstNode::Identifier(identifier, param_type)
     }
 
     fn parse_inline_asm(&mut self) -> AstNode {
