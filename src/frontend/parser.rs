@@ -7,7 +7,6 @@ use crate::{
 pub enum AstNode {
     Program(Vec<AstNode>),
     Identifier(String),
-    Type(Token),
     FunctionDefinition(String, Vec<AstNode>, Vec<AstNode>),
     VariableDeclaration(String, Box<AstNode>),
     InlineAsm(Vec<String>),
@@ -20,9 +19,17 @@ pub enum AstNode {
     Exit(Token),
     Sysinfo(String),
 
+    // internal value containers
+    IBool(bool),
+    IChar(char),
+    IStr(String),
+    IInt8(i8),
+    IInt16(i16),
+    IInt32(i32),
+
     // deprecated
-    IdentifierWithSize(String, i32),
     Number(i32),
+    IdentifierWithSize(String, i32),
     String(String),
 }
 
@@ -103,18 +110,19 @@ impl Parser {
 
     fn parse_variable_declaration(&mut self) -> AstNode {
         let var_type = self.current_token();
+        self.consume(var_type.clone());
 
         let identifier = self.consume_identifier();
 
         self.consume(Token::Equals);
 
         let value: AstNode = match self.current_token() {
-            Token::Bool(_)
-            | Token::Char(_)
-            | Token::Int8(_)
-            | Token::Int16(_)
-            | Token::Int32(_)
-            | Token::Str(_) => self.parse_datatype(),
+            Token::BoolContainer(_)
+            | Token::CharContainer(_)
+            | Token::Int8Container(_)
+            | Token::Int16Container(_)
+            | Token::Int32Container(_)
+            | Token::StrContainer(_) => self.parse_datatype(&var_type),
             Token::Syscall(sys) => self.parse_syscall(sys),
             _ => panic!(
                 "Unsupported value in variable declaration: {:?}",
@@ -136,12 +144,9 @@ impl Parser {
                 self.consume(Token::Semicolon);
                 node
             }
-            Token::TypeDefBool
-            | Token::TypeDefChar
-            | Token::TypeDefStr
-            | Token::TypeDefInt8
-            | Token::TypeDefInt16
-            | Token::TypeDefInt32 => self.parse_variable_declaration(),
+            Token::Bool | Token::Char | Token::Str | Token::Int8 | Token::Int16 | Token::Int32 => {
+                self.parse_variable_declaration()
+            }
             Token::InlineAsm => self.parse_inline_asm(),
             _ => {
                 panic!("Expected a statement, found: {:?}", self.current_token())
@@ -151,36 +156,107 @@ impl Parser {
         ast_node
     }
 
-    fn parse_datatype(&mut self) -> AstNode {
-        match self.current_token() {
-            Token::Bool(value) => {
-                self.consume(Token::Bool(value));
-                AstNode::Type(Token::Bool(value))
-            }
-            Token::Char(value) => {
-                self.consume(Token::Char(value));
-                AstNode::Type(Token::Char(value))
-            }
-            Token::Int8(value) => {
-                self.consume(Token::Int8(value));
-                AstNode::Type(Token::Int8(value))
-            }
-            Token::Int16(value) => {
-                self.consume(Token::Int16(value));
-                AstNode::Type(Token::Int16(value))
-            }
-            Token::Int32(value) => {
-                self.consume(Token::Int32(value));
-                AstNode::Type(Token::Int32(value))
-            }
-            Token::Str(value) => {
-                self.consume(Token::Str(value.clone()));
-                AstNode::Type(Token::Str(value))
-            }
-            _ => {
-                panic!("Expected a datatype, found: {:?}", self.current_token())
-            }
+    fn parse_datatype(&mut self, var_type: &Token) -> AstNode {
+        match var_type {
+            Token::Bool => self.parse_bool(),
+            Token::Char => self.parse_char(),
+            Token::Int8 => self.parse_int8(),
+            Token::Int16 => self.parse_int16(),
+            Token::Int32 => self.parse_int32(),
+            Token::Str => self.parse_str(),
+            _ => panic!("Unsupported variable type: {:?}", var_type),
         }
+    }
+
+    fn parse_bool(&mut self) -> AstNode {
+        let value = match self.current_token() {
+            Token::BoolContainer(v) => v,
+            _ => panic!(
+                "Expected a boolean value, found: {:?}",
+                self.current_token()
+            ),
+        };
+
+        self.consume(Token::BoolContainer(value));
+        AstNode::IBool(value)
+    }
+
+    fn parse_char(&mut self) -> AstNode {
+        let value = match self.current_token() {
+            Token::CharContainer(c) => c,
+            _ => panic!(
+                "Expected a character value, found: {:?}",
+                self.current_token()
+            ),
+        };
+
+        self.consume(Token::CharContainer(value));
+        AstNode::IChar(value)
+    }
+
+    fn parse_int8(&mut self) -> AstNode {
+        let value = match self.current_token() {
+            Token::Int8Container(v) => v,
+            _ => panic!(
+                "Expected an 8-bit integer value, found: {:?}",
+                self.current_token()
+            ),
+        };
+
+        self.consume(Token::Int8Container(value));
+        AstNode::IInt8(value)
+    }
+
+    fn parse_int16(&mut self) -> AstNode {
+        let value = match self.current_token() {
+            Token::Int8Container(v) => {
+                self.consume(Token::Int8Container(v));
+                v as i16
+            }
+            Token::Int16Container(v) => {
+                self.consume(Token::Int16Container(v));
+                v
+            }
+            _ => panic!(
+                "Expected a 16-bit integer value, found: {:?}",
+                self.current_token()
+            ),
+        };
+
+        AstNode::IInt16(value)
+    }
+
+    fn parse_int32(&mut self) -> AstNode {
+        let value = match self.current_token() {
+            Token::Int8Container(v) => {
+                self.consume(Token::Int8Container(v));
+                v as i32
+            }
+            Token::Int16Container(v) => {
+                self.consume(Token::Int16Container(v));
+                v as i32
+            }
+            Token::Int32Container(v) => {
+                self.consume(Token::Int32Container(v));
+                v
+            }
+            _ => panic!(
+                "Expected a 32-bit integer value, found: {:?}",
+                self.current_token()
+            ),
+        };
+
+        AstNode::IInt32(value)
+    }
+
+    fn parse_str(&mut self) -> AstNode {
+        let value = match self.current_token() {
+            Token::StrContainer(s) => s,
+            _ => panic!("Expected a string value, found: {:?}", self.current_token()),
+        };
+
+        self.consume(Token::StrContainer(value.clone()));
+        AstNode::IStr(value)
     }
 
     fn parse_parameter(&mut self) -> AstNode {
@@ -188,16 +264,19 @@ impl Parser {
 
         let identifier = self.consume_identifier();
 
-        if param_type == Token::TypeDefBool
-            || param_type == Token::TypeDefChar
-            || param_type == Token::TypeDefStr
-            || param_type == Token::TypeDefInt8
-            || param_type == Token::TypeDefInt16
-            || param_type == Token::TypeDefInt32
+        if param_type == Token::Bool
+            || param_type == Token::Char
+            || param_type == Token::Str
+            || param_type == Token::Int8
+            || param_type == Token::Int16
+            || param_type == Token::Int32
         {
             self.consume(param_type);
         } else {
-            panic!("Expected a type definition for parameter, found: {:?}", param_type);
+            panic!(
+                "Expected a type definition for parameter, found: {:?}",
+                param_type
+            );
         }
 
         AstNode::Identifier(identifier)
@@ -210,9 +289,9 @@ impl Parser {
         let mut asm_lines = Vec::new();
 
         while self.current_token() != Token::CurlyClose && self.current_token() != Token::EOF {
-            if let Token::Str(ref line) = self.current_token() {
+            if let Token::StrContainer(ref line) = self.current_token() {
                 asm_lines.push(line.clone());
-                self.consume(Token::Str(line.clone()));
+                self.consume(Token::StrContainer(line.clone()));
                 if self.current_token() == Token::Comma {
                     self.consume(Token::Comma);
                 }

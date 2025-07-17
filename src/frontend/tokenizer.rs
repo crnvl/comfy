@@ -20,20 +20,21 @@ pub enum Token {
     Unknown,
 
     // comfy base types
-    TypeDefBool,
-    TypeDefChar,
-    TypeDefStr,
-    TypeDefInt8,
-    TypeDefInt16,
-    TypeDefInt32,
-    Bool(bool),
-    Char(char),
-    Str(String),
-    Int8(i8),
-    Int16(i16),
-    Int32(i32),
+    Bool,
+    Int8,
+    Int16,
+    Int32,
+    Char,
+    Str,
 
-    // deprecated
+    // type containers
+    BoolContainer(bool),
+    CharContainer(char),
+    StrContainer(String),
+    Int8Container(i8),
+    Int16Container(i16),
+    Int32Container(i32),
+
     Number(i32),
     String(String),
 }
@@ -79,17 +80,21 @@ pub fn tokenize(script: &str) -> Vec<Token> {
                         string.push(iter.next().unwrap());
                     }
                 }
-                tokens.push(Token::Str(string));
+                tokens.push(Token::StrContainer(string));
             }
 
             '\'' => {
-                if let Some(&next_ch) = iter.peek() {
-                    iter.next(); // Consume the character
-                    if next_ch == '\'' {
-                        tokens.push(Token::Char('\'')); // Empty char
+                if let Some(_) = iter.peek() {
+                    let ch = iter.next().unwrap(); // Consume the character
+                    if let Some(&closing_quote) = iter.peek() {
+                        if closing_quote == '\'' {
+                            iter.next(); // Consume the closing quote
+                            tokens.push(Token::CharContainer(ch));
+                        } else {
+                            tokens.push(Token::Unknown); // Missing closing quote
+                        }
                     } else {
-                        tokens.push(Token::Char(next_ch));
-                        iter.next(); // Consume the character
+                        tokens.push(Token::Unknown); // Missing closing quote
                     }
                 } else {
                     tokens.push(Token::Unknown); // Unmatched quote
@@ -109,14 +114,14 @@ pub fn tokenize(script: &str) -> Vec<Token> {
                 match identifier.as_str() {
                     "fn" => tokens.push(Token::Function),
                     "asm" => tokens.push(Token::InlineAsm),
-                    "true" => tokens.push(Token::Bool(true)),
-                    "false" => tokens.push(Token::Bool(false)),
-                    "bool" => tokens.push(Token::TypeDefBool),
-                    "char" => tokens.push(Token::TypeDefChar),
-                    "str" => tokens.push(Token::TypeDefStr),
-                    "int8" => tokens.push(Token::TypeDefInt8),
-                    "int16" => tokens.push(Token::TypeDefInt16),
-                    "int32" => tokens.push(Token::TypeDefInt32),
+                    "true" => tokens.push(Token::BoolContainer(true)),
+                    "false" => tokens.push(Token::BoolContainer(false)),
+                    "bool" => tokens.push(Token::Bool),
+                    "char" => tokens.push(Token::Char),
+                    "str" => tokens.push(Token::Str),
+                    "int8" => tokens.push(Token::Int8),
+                    "int16" => tokens.push(Token::Int16),
+                    "int32" => tokens.push(Token::Int32),
                     _ => tokens.push(Token::Identifier(identifier)),
                 }
             }
@@ -134,12 +139,12 @@ pub fn tokenize(script: &str) -> Vec<Token> {
                 let num_value = number.parse::<i32>().unwrap();
                 match num_value {
                     n if n >= i8::MIN as i32 && n <= i8::MAX as i32 => {
-                        tokens.push(Token::Int8(n as i8))
+                        tokens.push(Token::Int8Container(n as i8))
                     }
                     n if n >= i16::MIN as i32 && n <= i16::MAX as i32 => {
-                        tokens.push(Token::Int16(n as i16))
+                        tokens.push(Token::Int16Container(n as i16))
                     }
-                    _ => tokens.push(Token::Int32(num_value)),
+                    _ => tokens.push(Token::Int32Container(num_value)),
                 }
             }
 
