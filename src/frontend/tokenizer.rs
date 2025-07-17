@@ -34,9 +34,6 @@ pub enum Token {
     Int8Container(i8),
     Int16Container(i16),
     Int32Container(i32),
-
-    Number(i32),
-    String(String),
 }
 
 pub fn tokenize(script: &str) -> Vec<Token> {

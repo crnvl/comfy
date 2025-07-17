@@ -9,28 +9,28 @@ pub fn parse_sys_write(parser: &mut Parser) -> AstNode {
     parser.consume(Token::ParentOpen);
 
     let fd = match parser.current_token() {
-        Token::Number(n) => {
-            parser.consume(Token::Number(n));
-            Token::Number(n)
-        },
+        Token::Int32Container(n) => {
+            parser.consume(Token::Int32Container(n));
+            Token::Int32Container(n)
+        }
         Token::Identifier(id) => {
             parser.consume(Token::Identifier(id.clone()));
             Token::Identifier(id)
-        },
+        }
         _ => panic!("Expected file descriptor (number)"),
     };
 
     parser.consume(Token::Comma);
 
     let write_data = match parser.current_token() {
-        Token::String(s) => {
-            parser.consume(Token::String(s.clone()));
-            Token::String(s)
-        },
+        Token::StrContainer(s) => {
+            parser.consume(Token::StrContainer(s.clone()));
+            Token::StrContainer(s)
+        }
         Token::Identifier(id) => {
             parser.consume(Token::Identifier(id.clone()));
             Token::Identifier(id)
-        },
+        }
         _ => panic!("Expected write data (string or identifier)"),
     };
 
@@ -45,10 +45,10 @@ pub fn parse_sys_read(parser: &mut Parser) -> AstNode {
     parser.consume(Token::ParentOpen);
 
     let fd = match parser.current_token() {
-        Token::Number(n) => n,
+        Token::Int32Container(n) => n,
         _ => panic!("Expected file descriptor (number)"),
     };
-    parser.consume(Token::Number(fd));
+    parser.consume(Token::Int32Container(fd));
 
     parser.consume(Token::Comma);
 
@@ -69,7 +69,7 @@ pub fn parse_sys_exit(parser: &mut Parser) -> AstNode {
     parser.consume(Token::ParentOpen);
 
     let code = match parser.current_token() {
-        Token::Number(n) => Token::Number(n),
+        Token::Int32Container(n) => Token::Int32Container(n),
         Token::Identifier(id) => Token::Identifier(id),
         _ => panic!("Expected exit code (number or identifier)"),
     };
@@ -86,26 +86,26 @@ pub fn parse_sys_open(parser: &mut Parser) -> AstNode {
     parser.consume(Token::ParentOpen);
 
     let filename = match parser.current_token() {
-        Token::String(s) => s,
+        Token::StrContainer(s) => s,
         _ => panic!("Expected filename (string)"),
     };
-    parser.consume(Token::String(filename.clone()));
+    parser.consume(Token::StrContainer(filename.clone()));
 
     parser.consume(Token::Comma);
 
     let flags = match parser.current_token() {
-        Token::Number(n) => n,
+        Token::Int32Container(n) => n,
         _ => panic!("Expected flags (number)"),
     };
-    parser.consume(Token::Number(flags));
+    parser.consume(Token::Int32Container(flags));
 
     parser.consume(Token::Comma);
 
     let mode = match parser.current_token() {
-        Token::Number(n) => n,
+        Token::Int32Container(n) => n,
         _ => panic!("Expected mode (number)"),
     };
-    parser.consume(Token::Number(mode));
+    parser.consume(Token::Int32Container(mode));
 
     parser.consume(Token::ParentClose);
 
