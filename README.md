@@ -21,7 +21,7 @@ fn main() {
 }
 ```
 
-## Currently supported syscallsi32
+## Currently supported syscalls
 **comfy** provides direct wrappers to arm32 syscalls, stripping away
 boilerplate code such as setting up registers manually.
 Syscall wrappers are prefixed with `$`.
