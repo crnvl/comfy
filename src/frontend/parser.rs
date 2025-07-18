@@ -1,5 +1,3 @@
-use serde::de::value::I8Deserializer;
-
 use crate::{
     backend::syscalls::{
         parse_sys_exit, parse_sys_open, parse_sys_read, parse_sys_sysinfo, parse_sys_write,
@@ -10,7 +8,7 @@ use crate::{
 #[derive(Debug)]
 pub enum AstNode {
     Program(Vec<AstNode>),
-    Identifier(String, Box<AstNode>),
+    _Identifier(String, Box<AstNode>),
     FunctionDefinition(String, Vec<AstNode>, Vec<AstNode>),
     VariableDeclaration(String, Box<AstNode>, Box<AstNode>),
     VariableBufferDeclaration(String, Box<AstNode>),

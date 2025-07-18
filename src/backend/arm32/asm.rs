@@ -142,6 +142,7 @@ pub fn load_syscall_return_value_into_reg(text: &mut Vec<String>) {
     text.push(format!("\tldr {}, [{}]\n", reg.as_str(), reg.as_str()));
 }
 
+#[allow(dead_code)]
 pub fn load_syscall_return_value_into_label(text: &mut Vec<String>, label: &str) {
     let ptr_reg: Register = Register::R5;
 
