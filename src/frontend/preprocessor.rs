@@ -105,7 +105,12 @@ fn evaluate_condition(condition: &str, config: &HashMap<String, String>) -> bool
 
 fn parse_system_include(line: &str) -> Option<String> {
     if line.starts_with("#include<") && line.ends_with('>') {
-        Some(line.trim_start_matches("#include<").trim_end_matches('>').trim().to_string())
+        Some(
+            line.trim_start_matches("#include<")
+                .trim_end_matches('>')
+                .trim()
+                .to_string(),
+        )
     } else {
         None
     }
