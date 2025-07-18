@@ -15,7 +15,7 @@ mod frontend;
 
 fn main() {
     let config_file = PathBuf::from("project.comfx");
-    let config = load_config(config_file.to_str().unwrap());
+    let config = load_config(config_file.to_str().expect("Failed to convert config file path to a UTF-8 string"));
 
     let args: Vec<String> = std::env::args().collect();
 
