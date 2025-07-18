@@ -7,17 +7,16 @@
 ## Features
 
 - Direct access to arm32 syscalls
-- Simple syntax for low-level programming
+- Simple syntax for type-safe, low-level programming
 - Compiles to arm32 assembly
 
 ## Example  
-
+The following example writes `hello comfy!` to stdout and exits with exit code `0`.
 ```
 fn main() {
-  $write(1, "hello comfy!\n");
-  let hello_text = ":3\n";
+  str hello_text = "hello comfy!\n";
   $write(1, hello_text);
-  $exit(703);
+  $exit(0);
 }
 ```
 
@@ -40,26 +39,28 @@ The following syscalls are currently supported or next in development:
   
 
 ## Variables
-**comfy** supports simple variable declarations using the `let` keyword. Variables can hold string literals, or numbers. They can also be used to refer to empty buffers in memory.
+**comfy** uses explicit types, which have to be stated when a variable is initialized. Currently available types are `bool`, `char`, `int8`, `int16`, `int32` and `str`.  
 
 ### Example  
 ```comfy
 fn main() {
-  let text = "hello!\n";
+  str text = "hello!\n";
   $write(1, text);
-  let code = 0;
+
+  int8 code = 0;
   $exit(code);
 }
 ```
 
-You can also reference fixed-size buffers using square brackets. This is especially useful for working with `read()` and other syscalls that require writeable memory pointers. Assigning return values to variables in one line is also possible.
+Variables are immutable by default. To declare a variable as mutable, use the `mut` keyword.
   
 ```comfy
 fn main() {
-  buf[128] comfySpace; // Declare a 128-byte buffer
-  let inputSize = $read(0, comfySpace); // Read from stdin into comfySpace and return the amount of bytes read
-  let code = 0;
-  $exit(code);
+  mut int8 exit_code = 1;
+
+  exit_code = 0;
+
+  $exit(exit_code);
 }
 
 ```
