@@ -23,3 +23,13 @@ fn meow(bool arg1, int8 arg2) {
     char e;
     str f;
 }
+
+fn baubau(mut bool arg1) {
+    arg1 = false;
+    
+    mut int8 a = 12;
+    a = 13;
+
+    mut int16 b = 12;
+    b = 13;
+}

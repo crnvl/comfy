@@ -11,6 +11,7 @@ pub enum Token {
     Semicolon,
     Colon,
     Equals,
+    Mut,
 
     BracketOpen,
     BracketClose,
@@ -111,6 +112,7 @@ pub fn tokenize(script: &str) -> Vec<Token> {
                 match identifier.as_str() {
                     "fn" => tokens.push(Token::Function),
                     "asm" => tokens.push(Token::InlineAsm),
+                    "mut" => tokens.push(Token::Mut),
                     "true" => tokens.push(Token::BoolContainer(true)),
                     "false" => tokens.push(Token::BoolContainer(false)),
                     "bool" => tokens.push(Token::Bool),

@@ -1,16 +1,24 @@
+use serde::de::value::I8Deserializer;
+
 use crate::{
-    backend::syscalls::{parse_sys_exit, parse_sys_write, parse_sys_read, parse_sys_open, parse_sys_sysinfo},
+    backend::syscalls::{
+        parse_sys_exit, parse_sys_open, parse_sys_read, parse_sys_sysinfo, parse_sys_write,
+    },
     frontend::tokenizer::Token,
 };
 
 #[derive(Debug)]
 pub enum AstNode {
     Program(Vec<AstNode>),
-    Identifier(String, Token),
+    Identifier(String, Box<AstNode>),
     FunctionDefinition(String, Vec<AstNode>, Vec<AstNode>),
-    VariableDeclaration(String, Box<AstNode>, Token),
-    VariableBufferDeclaration(String, Token),
+    VariableDeclaration(String, Box<AstNode>, Box<AstNode>),
+    VariableBufferDeclaration(String, Box<AstNode>),
+    VariableAssignment(String, Box<AstNode>),
     InlineAsm(Vec<String>),
+
+    // Token::Bool, mutable?
+    Type(Token, bool),
 
     // syscall wrappers
     Syscall(String, Box<AstNode>),
@@ -110,6 +118,12 @@ impl Parser {
     }
 
     fn parse_variable_declaration(&mut self) -> AstNode {
+        let mut mutable = false;
+        if self.current_token() == Token::Mut {
+            self.consume(Token::Mut);
+            mutable = true;
+        }
+
         let var_type = self.current_token();
         self.consume(var_type.clone());
 
@@ -117,7 +131,10 @@ impl Parser {
 
         if self.current_token() == Token::Semicolon {
             self.consume(Token::Semicolon);
-            return AstNode::VariableBufferDeclaration(identifier, var_type)
+            return AstNode::VariableBufferDeclaration(
+                identifier,
+                Box::new(AstNode::Type(var_type, mutable)),
+            );
         }
 
         self.consume(Token::Equals);
@@ -138,7 +155,11 @@ impl Parser {
 
         self.consume(Token::Semicolon);
 
-        AstNode::VariableDeclaration(identifier, Box::new(value), var_type)
+        AstNode::VariableDeclaration(
+            identifier,
+            Box::new(value),
+            Box::new(AstNode::Type(var_type, mutable)),
+        )
     }
 
     fn parse_statement(&mut self) -> AstNode {
@@ -150,9 +171,14 @@ impl Parser {
                 self.consume(Token::Semicolon);
                 node
             }
-            Token::Bool | Token::Char | Token::Str | Token::Int8 | Token::Int16 | Token::Int32 => {
-                self.parse_variable_declaration()
-            }
+            Token::Bool
+            | Token::Char
+            | Token::Str
+            | Token::Int8
+            | Token::Int16
+            | Token::Int32
+            | Token::Mut => self.parse_variable_declaration(),
+            Token::Identifier(_) => self.parse_identifier_statement(),
             Token::InlineAsm => self.parse_inline_asm(),
             _ => {
                 panic!("Expected a statement, found: {:?}", self.current_token())
@@ -160,6 +186,39 @@ impl Parser {
         };
 
         ast_node
+    }
+
+    fn parse_identifier_statement(&mut self) -> AstNode {
+        let identifier = self.consume_identifier();
+
+        match self.current_token() {
+            // variable assignment
+            Token::Equals => self.parse_variable_assignment(identifier),
+            // function call
+            Token::ParentOpen => todo!(),
+            _ => panic!("Expected '=' or '(', found: {:?}", self.current_token()),
+        }
+    }
+
+    fn parse_variable_assignment(&mut self, identifier: String) -> AstNode {
+        self.consume(Token::Equals);
+
+        let value: AstNode = match self.current_token() {
+            Token::BoolContainer(_) => self.parse_datatype(&Token::Bool),
+            Token::CharContainer(_) => self.parse_datatype(&Token::Char),
+            Token::Int8Container(_) => self.parse_datatype(&Token::Int8),
+            Token::Int16Container(_) => self.parse_datatype(&Token::Int16),
+            Token::Int32Container(_) => self.parse_datatype(&Token::Int32),
+            Token::StrContainer(_) => self.parse_datatype(&Token::Str),
+            _ => panic!(
+                "Unsupported value in variable assignment: {:?}",
+                self.current_token()
+            ),
+        };
+
+        self.consume(Token::Semicolon);
+
+        AstNode::VariableAssignment(identifier, Box::new(value))
     }
 
     fn parse_datatype(&mut self, var_type: &Token) -> AstNode {
@@ -266,6 +325,12 @@ impl Parser {
     }
 
     fn parse_parameter(&mut self) -> AstNode {
+        let mut mutable = false;
+        if self.current_token() == Token::Mut {
+            self.consume(Token::Mut);
+            mutable = true;
+        }
+
         let param_type = self.current_token();
 
         if param_type == Token::Bool
@@ -285,7 +350,7 @@ impl Parser {
 
         let identifier = self.consume_identifier();
 
-        AstNode::Identifier(identifier, param_type)
+        AstNode::Identifier(identifier, Box::new(AstNode::Type(param_type, mutable)))
     }
 
     fn parse_inline_asm(&mut self) -> AstNode {
