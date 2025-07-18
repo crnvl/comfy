@@ -7,4 +7,5 @@ name = "comfy compiler"
 version = "0.1.0"
 author = "the luna company GbR"
 
-logging = true
+[defines]
+ENABLE_LOGGING = "true"

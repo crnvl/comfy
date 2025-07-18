@@ -7,6 +7,8 @@ fn main() {
 
     #if ENABLE_LOGGING
         $write(1, "Logging enabled!\n");
+    #else
+        $write(1, "Logging disabled!\n");
     #endif
 
     let hello_text = ":3\n";

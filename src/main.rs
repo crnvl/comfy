@@ -1,7 +1,10 @@
 use std::path::{Path, PathBuf};
 
 use crate::{
-    backend::{arm32::{self, syscall_mapper::Architecture}, generator::generate},
+    backend::{
+        arm32::{self, syscall_mapper::Architecture},
+        generator::generate,
+    },
     extra::config::load_config,
     frontend::{parser::parse, preprocessor, tokenizer::tokenize},
 };
@@ -39,15 +42,16 @@ fn main() {
         .unwrap_or_else(|| format!("build/{}.s", file_stem));
 
     let user_paths = vec![PathBuf::from("./src")];
-    let empty_defines = std::collections::HashMap::new();
-    let defines_ref = config.logging.as_ref().unwrap_or(&"false".to_string());
-    let preprocessed_content = match preprocessor::preprocess_file(input_path, &user_paths, &empty_defines) {
-        Ok(content) => content,
-        Err(e) => {
-            eprintln!("Error preprocessing file {}: {}", input_path.display(), e);
-            std::process::exit(1);
-        }
-    };
+    let defines = config.defines.clone().unwrap_or_default();
+
+    let preprocessed_content =
+        match preprocessor::preprocess_file(input_path, &user_paths, &defines) {
+            Ok(content) => content,
+            Err(e) => {
+                eprintln!("Error preprocessing file {}: {}", input_path.display(), e);
+                std::process::exit(1);
+            }
+        };
 
     let verbose = args.get(2).map_or(false, |arg| arg == "--verbose");
 
@@ -84,7 +88,11 @@ fn main() {
     }
 
     match std::fs::write(output_path, assembly_code) {
-        Ok(_) => println!("Assembly code written to {} <3\nUsing architecture: {:?}", output_path.display(), arch),
+        Ok(_) => println!(
+            "Assembly code written to {} <3\nUsing architecture: {:?}",
+            output_path.display(),
+            arch
+        ),
         Err(e) => {
             eprintln!("Error writing to {}: {}", output_path.display(), e);
             std::process::exit(1);
