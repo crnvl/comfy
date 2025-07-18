@@ -103,5 +103,70 @@ fn main() {
 
 ```
 
+## Include System & Conditional Compilation
+
+**comfy** supports a simple preprocessor system similar to C/C++, allowing you to include external files and conditionally compile blocks of code using configuration flags.
+
+### File Inclusion
+
+You can include system or user files using the `#include` directive.
+
+* `#include<sys>` – loads a system library from the comfy standard path (e.g., `/usr/include/comfylang/sys`)
+* `#include<"./custom.fy">` – loads a user-defined file relative to your project or include path
+
+These inclusions are handled before compilation and act as if the contents of the file were directly pasted at the `#include` line.
+
+#### Example
+
+```comfy
+#include<sys>
+#include<"lib/utils.fy">
+
+fn main() {
+  $write(1, helloText);
+  $exit(0);
+}
+```
+
+---
+
+### Conditional Compilation
+
+comfy supports `#if`, `#else`, and `#endif` to include or exclude code depending on flags set in your `project.comfx` configuration file.
+
+These flags are defined as key-value pairs under the `[defines]` section of the config, and evaluated before compilation.
+
+#### Supported conditions:
+
+* `#if FLAG_NAME`
+* `#if FLAG_NAME == "value"`
+* `#if FLAG_NAME != "value"`
+* `#else`
+* `#endif`
+
+#### Example
+
+```comfy
+#if ENABLE_LOGGING
+  $write(1, "Logging is on\n");
+#endif
+
+#if VERSION == "1.2.3"
+  $write(1, "Version matches\n");
+#else
+  $write(1, "Version mismatch\n");
+#endif
+```
+
+#### Example config (`project.comfx` in TOML format)
+
+```toml
+[defines]
+ENABLE_LOGGING = "true"
+VERSION = "1.2.3"
+```
+
+---
+
 ## Roadmap
 Project progress, planned and future features can be viewed on the [Project board](https://github.com/users/crnvl/projects/8).
