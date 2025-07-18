@@ -75,6 +75,12 @@ fn expand_includes_with_conditions(
         }
     }
 
+    if !condition_stack.is_empty() {
+        return Err(format!(
+            "Unmatched #if directives detected. Stack: {:?}",
+            condition_stack
+        ));
+    }
     Ok(output)
 }
 
