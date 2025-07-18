@@ -35,11 +35,6 @@ pub enum AstNode {
     IInt8(i8),
     IInt16(i16),
     IInt32(i32),
-
-    // deprecated
-    Number(i32),
-    IdentifierWithSize(String, i32),
-    String(String),
 }
 
 pub fn parse(tokens: Vec<Token>) -> AstNode {
@@ -350,7 +345,7 @@ impl Parser {
 
         let identifier = self.consume_identifier();
 
-        AstNode::Identifier(identifier, Box::new(AstNode::Type(param_type, mutable)))
+        AstNode::VariableBufferDeclaration(identifier, Box::new(AstNode::Type(param_type, mutable)))
     }
 
     fn parse_inline_asm(&mut self) -> AstNode {

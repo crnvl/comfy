@@ -54,10 +54,7 @@ impl Generator {
 
                 // Declare params in .bss
                 for param in params {
-                    if let AstNode::IdentifierWithSize(param_name, size) = param {
-                        self.section_writer
-                            .declare_bss_with_name_prefix(&fun_name, param_name, *size);
-                    }
+                    self.generate(param);
                 }
 
                 for stmt in body {
@@ -100,6 +97,8 @@ impl Generator {
             }
 
             AstNode::VariableBufferDeclaration(name, var_type) => {
+                let name = format!("{}_{}", self.last_fun_name, name);
+
                 let (value_type, is_mutable) = match &**var_type {
                     AstNode::Type(token, is_mutable) => (token, *is_mutable),
                     _ => panic!("Expected type node, found: {:?}", var_type),
@@ -109,7 +108,7 @@ impl Generator {
                     panic!("Immutable buffers are not supported yet");
                 }
 
-                self.store_buffer(name, value_type);
+                self.store_buffer(&name, value_type);
             }
 
             AstNode::VariableAssignment(name, value) => match &**value {
@@ -120,11 +119,6 @@ impl Generator {
                 AstNode::IInt32(val) => self.assign_num_variable(&name, *val as usize),
                 _ => panic!("Unsupported value type in variable assignment: {:?}", value),
             },
-
-            AstNode::IdentifierWithSize(name, size) => {
-                let label = format!("{}_{}", self.last_fun_name, name);
-                self.section_writer.declare_bss_with_len(&label, *size);
-            }
 
             AstNode::InlineAsm(asm_lines) => {
                 self.section_writer.push_text("\t@ ===Inline Assembly===");
