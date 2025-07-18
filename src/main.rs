@@ -64,8 +64,6 @@ fn main() {
         println!("AST Nodes: {:#?}", ast_nodes);
     }
 
-    return;
-
     let generator = generate(&ast_nodes, arch);
 
     let assembly_code = arm32::asm::generate_assembly(

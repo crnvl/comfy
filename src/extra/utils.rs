@@ -1,5 +1,7 @@
 use rand::Rng;
 
+use crate::frontend::tokenizer::Token;
+
 fn generate_random_alphanumeric_string(length: usize) -> String {
     const CHARSET: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZ\
                              abcdefghijklmnopqrstuvwxyz\
@@ -27,6 +29,14 @@ pub fn generate_str_varname() -> String {
     name
 }
 
-pub fn get_bytes_from_type() {
-    // TODO: 
+pub fn get_bytes_from_type(token: &Token) -> usize {
+    match token {
+        Token::Bool => 1,
+        Token::Char => 1,
+        Token::Int8 => 1,
+        Token::Int16 => 2,
+        Token::Int32 => 4,
+        Token::Str => 4, // Assuming a pointer size for strings
+        _ => panic!("Unsupported type for byte size calculation: {:?}", token),
+    }
 }

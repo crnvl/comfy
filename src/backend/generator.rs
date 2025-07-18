@@ -1,15 +1,14 @@
 use crate::{
     backend::arm32::{
         asm::{
-            load_syscall_return_value_into_label, store_syscall_return_value, syscall_1arg,
-            syscall_2args, syscall_3args,
+            ldr_label, mov_imm, store_syscall_return_value, syscall_1arg, syscall_2args,
+            syscall_3args,
         },
         section,
         syscall_mapper::{Architecture, get_syscall_num_or_panic},
     },
-    extra::utils::generate_str_varname,
-    frontend::parser::AstNode,
-    frontend::tokenizer::Token,
+    extra::utils::{generate_str_varname, get_bytes_from_type},
+    frontend::{parser::AstNode, tokenizer::Token},
 };
 
 pub struct Generator {
@@ -66,24 +65,61 @@ impl Generator {
                 }
             }
 
-            AstNode::VariableDeclaration(name, value, _) => { // TODO: handle var_type
+            AstNode::VariableDeclaration(name, value, var_type) => {
                 let label = format!("{}_{}", self.last_fun_name, name);
+                let (value_type, is_mutable) = match &**var_type {
+                    AstNode::Type(token, is_mutable) => (token, *is_mutable),
+                    _ => panic!("Expected type node, found: {:?}", var_type),
+                };
 
                 match &**value {
-                    AstNode::Number(n) => {
-                        self.section_writer.push_rodata_word(&label, *n);
+                    AstNode::IBool(val) => self.store_num_variable(
+                        &label,
+                        if *val { 1 } else { 0 },
+                        value_type,
+                        is_mutable,
+                    ),
+                    AstNode::IChar(val) => {
+                        self.store_num_variable(&label, *val as usize, value_type, is_mutable)
                     }
-                    AstNode::String(s) => {
-                        self.section_writer.push_rodata_str_with_len(&label, s);
+                    AstNode::IInt8(val) => {
+                        self.store_num_variable(&label, *val as usize, value_type, is_mutable)
                     }
-                    AstNode::Syscall(_, _) => {
-                        self.section_writer.declare_bss(&label, 4);
-                        self.generate(value);
-                        load_syscall_return_value_into_label(&mut self.section_writer.text, &label);
+                    AstNode::IInt16(val) => {
+                        self.store_num_variable(&label, *val as usize, value_type, is_mutable)
                     }
-                    _ => panic!("Unsupported variable declaration value: {:?}", value),
+                    AstNode::IInt32(val) => {
+                        self.store_num_variable(&label, *val as usize, value_type, is_mutable)
+                    }
+                    AstNode::IStr(val) => self.store_str_variable(&label, val, is_mutable),
+                    _ => panic!(
+                        "Unsupported value type in variable declaration: {:?}",
+                        value
+                    ),
                 }
             }
+
+            AstNode::VariableBufferDeclaration(name, var_type) => {
+                let (value_type, is_mutable) = match &**var_type {
+                    AstNode::Type(token, is_mutable) => (token, *is_mutable),
+                    _ => panic!("Expected type node, found: {:?}", var_type),
+                };
+
+                if !is_mutable {
+                    panic!("Immutable buffers are not supported yet");
+                }
+
+                self.store_buffer(name, value_type);
+            }
+
+            AstNode::VariableAssignment(name, value) => match &**value {
+                AstNode::IBool(val) => self.assign_num_variable(&name, if *val { 1 } else { 0 }),
+                AstNode::IChar(val) => self.assign_num_variable(&name, *val as usize),
+                AstNode::IInt8(val) => self.assign_num_variable(&name, *val as usize),
+                AstNode::IInt16(val) => self.assign_num_variable(&name, *val as usize),
+                AstNode::IInt32(val) => self.assign_num_variable(&name, *val as usize),
+                _ => panic!("Unsupported value type in variable assignment: {:?}", value),
+            },
 
             AstNode::IdentifierWithSize(name, size) => {
                 let label = format!("{}_{}", self.last_fun_name, name);
@@ -197,6 +233,42 @@ impl Generator {
         };
 
         self.section_writer.push_text(&asm);
+    }
+
+    fn store_num_variable(
+        &mut self,
+        label: &str,
+        val: usize,
+        value_type: &Token,
+        is_mutable: bool,
+    ) {
+        if is_mutable {
+            self.section_writer
+                .declare_bss(&label, get_bytes_from_type(value_type));
+            self.section_writer.push_text(ldr_label("r0", &label));
+            self.section_writer.push_text(mov_imm("r0", val));
+            return;
+        }
+
+        self.section_writer.push_rodata_word(&label, val as i32);
+    }
+
+    fn assign_num_variable(&mut self, label: &str, val: usize) {
+        self.section_writer.push_text(ldr_label("r0", &label));
+        self.section_writer.push_text(mov_imm("r0", val));
+    }
+
+    fn store_buffer(&mut self, label: &str, value_type: &Token) {
+        self.section_writer
+            .declare_bss(&label, get_bytes_from_type(value_type));
+    }
+
+    fn store_str_variable(&mut self, label: &str, val: &str, is_mutable: bool) {
+        if is_mutable {
+            panic!("Mutable string variables are not supported yet");
+        }
+
+        self.section_writer.push_rodata_str_with_len(&label, val);
     }
 
     fn generate_open(&mut self, inner: &AstNode) {

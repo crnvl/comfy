@@ -17,7 +17,7 @@ pub enum AstNode {
     VariableAssignment(String, Box<AstNode>),
     InlineAsm(Vec<String>),
 
-    // Token::Bool, mutable?
+    // Token::Bool, isMutable?
     Type(Token, bool),
 
     // syscall wrappers

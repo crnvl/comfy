@@ -13,20 +13,21 @@ fn main() {
 
     str m = "hello";
     str n = "";
+
+    mut int8 o = 12;
+    o = 13;
 }
 
-fn meow(bool arg1, int8 arg2) {
-    bool a;
-    int8 b;
-    int16 c;
-    int32 d;
-    char e;
-    str f;
+fn meow(bool arg1,int8 arg2) {
+    mut bool a;
+    mut int8 b;
+    mut int16 c;
+    mut int32 d;
+    mut char e;
+    mut str f;
 }
 
-fn baubau(mut bool arg1) {
-    arg1 = false;
-    
+fn baubau(mut bool arg1) {    
     mut int8 a = 12;
     a = 13;
 
