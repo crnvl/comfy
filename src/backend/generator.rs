@@ -250,7 +250,8 @@ impl Generator {
 
     fn assign_num_variable(&mut self, label: &str, val: usize) {
         self.section_writer.push_text(ldr_label("r0", &label));
-        self.section_writer.push_text(mov_imm("r0", val));
+        self.section_writer.push_text(mov_imm("r1", val));
+        self.section_writer.push_text("str r1, [r0]");
     }
 
     fn store_buffer(&mut self, label: &str, value_type: &Token) {
