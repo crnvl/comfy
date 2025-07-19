@@ -188,7 +188,7 @@ impl Parser {
             // variable assignment
             Token::Equals => self.parse_variable_assignment(identifier),
             // function call
-            Token::ParentOpen => todo!(),
+            Token::ParentOpen => panic!("Function call parsing not implemented yet"),
             _ => panic!("Expected '=' or '(', found: {:?}", self.current_token()),
         }
     }

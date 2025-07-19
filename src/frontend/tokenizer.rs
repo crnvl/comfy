@@ -82,7 +82,7 @@ pub fn tokenize(script: &str) -> Vec<Token> {
             }
 
             '\'' => {
-                if let Some(_) = iter.peek() {
+                if iter.peek().is_some() {
                     let ch = iter.next().unwrap(); // Consume the character
                     if let Some(&closing_quote) = iter.peek() {
                         if closing_quote == '\'' {
