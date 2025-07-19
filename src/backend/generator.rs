@@ -239,8 +239,9 @@ impl Generator {
         if is_mutable {
             self.section_writer
                 .declare_bss(&label, get_bytes_from_type(value_type));
-            self.section_writer.push_text(ldr_label("r0", &label));
+            self.section_writer.push_text(ldr_label("r1", &label));
             self.section_writer.push_text(mov_imm("r0", val));
+            self.section_writer.push_text("str r0, [r1]");
             return;
         }
 
