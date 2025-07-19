@@ -18,7 +18,7 @@ fn main() {
     o = 13;
 }
 
-fn meow(bool arg1,int8 arg2) {
+fn meow(bool arg1, int8 arg2) {
     mut bool a;
     mut int8 b;
     mut int16 c;
