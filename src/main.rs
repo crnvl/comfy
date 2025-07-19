@@ -56,10 +56,12 @@ fn main() {
     let verbose = args.get(2).map_or(false, |arg| arg == "--verbose");
 
     let tokens = tokenize(&preprocessed_content);
+    if verbose {
+        println!("Tokens: {:#?}", tokens);
+    }
     let ast_nodes = parse(tokens.clone());
     if verbose {
-        println!("AST Nodes: {:?}", ast_nodes);
-        println!("Tokens: {:?}", tokens);
+        println!("AST Nodes: {:#?}", ast_nodes);
     }
 
     let generator = generate(&ast_nodes, arch);
