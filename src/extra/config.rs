@@ -25,7 +25,11 @@ pub struct MetaSection {
 }
 
 pub fn load_config(path: &str) -> ProjectConfig {
-    let content = std::fs::read_to_string(path)
-        .unwrap_or_else(|_| panic!("Failed to read config file: {}", path));
+    let fallback = r#"[target]
+    arch = "arm32"
+    output = "build/main.s"
+    "#;
+ 
+    let content = std::fs::read_to_string(path).unwrap_or_else(|_| fallback.to_string());
     toml::from_str(&content).unwrap_or_else(|_| panic!("Invalid TOML format in: {}", path))
 }
