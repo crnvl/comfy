@@ -16,7 +16,7 @@ fn main() {
 
     mut int8 o = 12;
     o = 13;
-
+    
     $exit(o);
 }
 

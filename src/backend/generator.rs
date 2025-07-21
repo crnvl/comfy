@@ -156,7 +156,9 @@ impl Generator {
         let syscall_number: u32 = get_syscall_num_or_panic(self.arch, "write");
         let fd_str = match fd {
             Token::Int32Container(n) => n.to_string(),
-            Token::Identifier(id) => id.clone(),
+            Token::Int16Container(n) => (i32::from(*n)).to_string(),
+            Token::Int8Container(n) => (i32::from(*n)).to_string(),
+            Token::Identifier(id) => format!("{}_{}", self.last_fun_name, id),
             _ => panic!("Unsupported file descriptor type: {:?}", fd),
         };
 
@@ -167,9 +169,30 @@ impl Generator {
 
                 match fd {
                     Token::Int32Container(n) => {
+                        let fd_val = *n as i32;
                         let instr = syscall_3args(
                             syscall_number,
-                            &n.to_string(),
+                            &fd_val.to_string(),
+                            &var,
+                            &format!("{}_len", var),
+                        );
+                        self.section_writer.push_text(&instr);
+                    }
+                    Token::Int16Container(n) => {
+                        let fd_val = i32::from(*n);
+                        let instr = syscall_3args(
+                            syscall_number,
+                            &fd_val.to_string(),
+                            &var,
+                            &format!("{}_len", var),
+                        );
+                        self.section_writer.push_text(&instr);
+                    }
+                    Token::Int8Container(n) => {
+                        let fd_val = i32::from(*n);
+                        let instr = syscall_3args(
+                            syscall_number,
+                            &fd_val.to_string(),
                             &var,
                             &format!("{}_len", var),
                         );
@@ -182,7 +205,7 @@ impl Generator {
                         // to load the value into a register from a label
                         // TODO: Refactor this to use a more generic approach
                         self.section_writer.push_text(format!(
-                            "\tmov r7, #{}\n\tldr r0, ={}\n\tldr r0, [r0]\n\tldr r1, ={}\n\tldr r2, ={}_len\n\tsvc #0\n",
+                            "\tmov r7, #{}\n\tldr r0, ={}\n\tldr r1, ={}\n\tldr r2, ={}_len\n\tsvc #0\n",
                             syscall_number, label, var, var
                         ));
                     }
@@ -209,7 +232,15 @@ impl Generator {
         };
 
         let syscall_number = get_syscall_num_or_panic(self.arch, "read");
-        let fd_str = fd.to_string();
+
+        let fd_str = match fd {
+            Token::Int32Container(n) => n.to_string(),
+            Token::Int16Container(n) => (i32::from(*n)).to_string(),
+            Token::Int8Container(n) => (i32::from(*n)).to_string(),
+            Token::Identifier(id) => format!("{}_{}", self.last_fun_name, id),
+            _ => panic!("Unsupported file descriptor type: {:?}", fd),
+        };
+
         let label = format!("{}_{}", self.last_fun_name, buffer);
 
         let instr = syscall_2args(syscall_number, &fd_str, &label);
@@ -228,7 +259,12 @@ impl Generator {
 
         let asm = match code {
             Token::Int32Container(n) => syscall_1arg(syscall_number, &n.to_string()),
-            Token::Identifier(id) => syscall_1arg(syscall_number, &id),
+            Token::Int16Container(n) => syscall_1arg(syscall_number, &(i32::from(*n)).to_string()),
+            Token::Int8Container(n) => syscall_1arg(syscall_number, &(i32::from(*n)).to_string()),
+            Token::Identifier(id) => syscall_1arg(
+                syscall_number,
+                format!("{}_{}", self.last_fun_name, id).as_str(),
+            ),
             _ => panic!("Unsupported exit code: {:?}", code),
         };
 
@@ -247,7 +283,7 @@ impl Generator {
                 .declare_bss(&label, get_bytes_from_type(value_type));
             self.section_writer.push_text(ldr_label("r1", &label));
             self.section_writer.push_text(mov_imm("r0", val));
-            self.section_writer.push_text("str r0, [r1]");
+            self.section_writer.push_text("\tstr r0, [r1]");
             return;
         }
 
