@@ -16,6 +16,8 @@ fn main() {
 
     mut int8 o = 12;
     o = 13;
+
+    $exit(o);
 }
 
 fn meow(mut bool arg1, mut int8 arg2) {

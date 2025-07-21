@@ -111,14 +111,20 @@ impl Generator {
                 self.store_buffer(&name, value_type);
             }
 
-            AstNode::VariableAssignment(name, value) => match &**value {
-                AstNode::IBool(val) => self.assign_num_variable(&name, if *val { 1 } else { 0 }),
-                AstNode::IChar(val) => self.assign_num_variable(&name, *val as usize),
-                AstNode::IInt8(val) => self.assign_num_variable(&name, *val as usize),
-                AstNode::IInt16(val) => self.assign_num_variable(&name, *val as usize),
-                AstNode::IInt32(val) => self.assign_num_variable(&name, *val as usize),
-                _ => panic!("Unsupported value type in variable assignment: {:?}", value),
-            },
+            AstNode::VariableAssignment(name, value) => {
+                let var_name = format!("{}_{}", self.last_fun_name, name);
+
+                match &**value {
+                    AstNode::IBool(val) => {
+                        self.assign_num_variable(&name, if *val { 1 } else { 0 })
+                    }
+                    AstNode::IChar(val) => self.assign_num_variable(&var_name, *val as usize),
+                    AstNode::IInt8(val) => self.assign_num_variable(&var_name, *val as usize),
+                    AstNode::IInt16(val) => self.assign_num_variable(&var_name, *val as usize),
+                    AstNode::IInt32(val) => self.assign_num_variable(&var_name, *val as usize),
+                    _ => panic!("Unsupported value type in variable assignment: {:?}", value),
+                };
+            }
 
             AstNode::InlineAsm(asm_lines) => {
                 self.section_writer.push_text("\t@ ===Inline Assembly===");
