@@ -1,4 +1,4 @@
-#[derive(Debug, Clone, PartialEq )]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Token {
     Function,
     Identifier(String),
@@ -81,21 +81,22 @@ pub fn tokenize(script: &str) -> Vec<Token> {
                 tokens.push(Token::StrContainer(string));
             }
 
-            '\'' => {
-                if iter.peek().is_some() {
-                    let ch = iter.next().unwrap(); // Consume the character
-                    if let Some(&closing_quote) = iter.peek() {
-                        if closing_quote == '\'' {
-                            iter.next(); // Consume the closing quote
-                            tokens.push(Token::CharContainer(ch));
-                        } else {
-                            tokens.push(Token::Unknown); // Missing closing quote
+            '/' => {
+                if let Some(&next_ch) = iter.peek() {
+                    if next_ch == '/' {
+                        iter.next(); // Consume the second slash
+                        while let Some(&next_ch) = iter.peek() {
+                            if next_ch == '\n' {
+                                break;
+                            } else {
+                                iter.next();
+                            }
                         }
                     } else {
-                        tokens.push(Token::Unknown); // Missing closing quote
+                        tokens.push(Token::Unknown);
                     }
                 } else {
-                    tokens.push(Token::Unknown); // Unmatched quote
+                    tokens.push(Token::Unknown);
                 }
             }
 
