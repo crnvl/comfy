@@ -10,6 +10,7 @@ pub enum AstNode {
     Program(Vec<AstNode>),
     _Identifier(String, Box<AstNode>),
     FunctionDefinition(String, Vec<AstNode>, Vec<AstNode>),
+    FunctionCall(String, Vec<AstNode>),
     VariableDeclaration(String, Box<AstNode>, Box<AstNode>),
     VariableBufferDeclaration(String, Box<AstNode>),
     VariableAssignment(String, Box<AstNode>),
@@ -48,6 +49,32 @@ pub struct Parser {
 impl Parser {
     fn new(tokens: Vec<Token>) -> Self {
         Self { tokens, current: 0 }
+    }
+
+    fn parse_statement(&mut self) -> AstNode {
+        let ast_node = match self.current_token() {
+            Token::Function => self.parse_function_definition(),
+            Token::Syscall(syscall) => {
+                let node = self.parse_syscall(syscall);
+
+                self.consume(Token::Semicolon);
+                node
+            }
+            Token::Bool
+            | Token::Char
+            | Token::Str
+            | Token::Int8
+            | Token::Int16
+            | Token::Int32
+            | Token::Mut => self.parse_variable_declaration(),
+            Token::Identifier(_) => self.parse_identifier_statement(),
+            Token::InlineAsm => self.parse_inline_asm(),
+            _ => {
+                panic!("Expected a statement, found: {:?}", self.current_token())
+            }
+        };
+
+        ast_node
     }
 
     fn parse(&mut self) -> AstNode {
@@ -155,32 +182,6 @@ impl Parser {
         )
     }
 
-    fn parse_statement(&mut self) -> AstNode {
-        let ast_node = match self.current_token() {
-            Token::Function => self.parse_function_definition(),
-            Token::Syscall(syscall) => {
-                let node = self.parse_syscall(syscall);
-
-                self.consume(Token::Semicolon);
-                node
-            }
-            Token::Bool
-            | Token::Char
-            | Token::Str
-            | Token::Int8
-            | Token::Int16
-            | Token::Int32
-            | Token::Mut => self.parse_variable_declaration(),
-            Token::Identifier(_) => self.parse_identifier_statement(),
-            Token::InlineAsm => self.parse_inline_asm(),
-            _ => {
-                panic!("Expected a statement, found: {:?}", self.current_token())
-            }
-        };
-
-        ast_node
-    }
-
     fn parse_identifier_statement(&mut self) -> AstNode {
         let identifier = self.consume_identifier();
 
@@ -188,9 +189,42 @@ impl Parser {
             // variable assignment
             Token::Equals => self.parse_variable_assignment(identifier),
             // function call
-            Token::ParentOpen => panic!("Function call parsing not implemented yet"),
+            Token::ParentOpen => self.parse_function_call(identifier),
             _ => panic!("Expected '=' or '(', found: {:?}", self.current_token()),
         }
+    }
+
+    fn parse_function_call(&mut self, identifier: String) -> AstNode {
+        self.consume(Token::ParentOpen);
+
+        let mut arguments = Vec::new();
+        while self.current_token() != Token::ParentClose {
+            match self.current_token() {
+                Token::BoolContainer(_)
+                | Token::CharContainer(_)
+                | Token::Int8Container(_)
+                | Token::Int16Container(_)
+                | Token::Int32Container(_)
+                | Token::StrContainer(_) => {
+                    arguments.push(self.parse_datatype(&self.current_token()));
+                }
+                Token::Identifier(_) => {
+                    arguments.push(self.parse_identifier_statement());
+                }
+                _ => panic!(
+                    "Expected a value or identifier in function call, found: {:?}",
+                    self.current_token()
+                ),
+            }
+
+            if self.current_token() == Token::Comma {
+                self.consume(Token::Comma);
+            }
+        }
+        self.consume(Token::ParentClose);
+        self.consume(Token::Semicolon);
+
+        AstNode::FunctionCall(identifier, arguments)
     }
 
     fn parse_variable_assignment(&mut self, identifier: String) -> AstNode {
