@@ -21,10 +21,10 @@ pub enum AstNode {
     // syscall wrappers
     Syscall(String, Box<AstNode>),
     Write(Token, Token),
-    Read(Token, String),
-    Open(String, usize, usize),
+    Read(Token, Token),
+    Open(Token, Token, Token),
     Exit(Token),
-    Sysinfo(String),
+    Sysinfo(Token),
 
     // internal value containers
     IBool(bool),

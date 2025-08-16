@@ -38,12 +38,12 @@ pub fn parse_sys_read(parser: &mut Parser) -> AstNode {
 
     parser.consume(Token::Comma);
 
-    let buffer = match parser.current_token() {
-        Token::Identifier(id) => id,
+    let buffer: Token = match parser.current_token() {
+        Token::Identifier(id) => Token::Identifier(id),
+        Token::StrContainer(s) => Token::StrContainer(s),
         _ => panic!("Expected buffer identifier"),
     };
-
-    parser.consume(Token::Identifier(buffer.clone()));
+    parser.consume(buffer.clone());
     parser.consume(Token::ParentClose);
 
     AstNode::Read(fd, buffer)
@@ -66,51 +66,37 @@ pub fn parse_sys_open(parser: &mut Parser) -> AstNode {
     parser.consume(Token::ParentOpen);
 
     let filename = match parser.current_token() {
-        Token::StrContainer(s) => s,
-        Token::Identifier(id) => id,
+        Token::StrContainer(s) => Token::StrContainer(s.clone()),
+        Token::Identifier(id) => Token::Identifier(id.clone()),
         _ => panic!("Expected filename (string)"),
     };
-    parser.consume(Token::StrContainer(filename.clone()));
+    parser.consume(filename.clone());
 
     parser.consume(Token::Comma);
 
     let flags = match parser.current_token() {
-        Token::Int32Container(n) => {
-            parser.consume(Token::Int32Container(n));
-            n
-        }
-        Token::Int16Container(n) => {
-            parser.consume(Token::Int16Container(n));
-            i32::from(n)
-        }
-        Token::Int8Container(n) => {
-            parser.consume(Token::Int8Container(n));
-            i32::from(n)
-        }
+        Token::Int32Container(n) => Token::Int32Container(n),
+        Token::Int16Container(n) => Token::Int16Container(n),
+        Token::Int8Container(n) => Token::Int8Container(n),
+        Token::Identifier(id) => Token::Identifier(id),
         _ => panic!("Expected flags (number)"),
     };
+    parser.consume(flags.clone());
 
     parser.consume(Token::Comma);
 
     let mode = match parser.current_token() {
-        Token::Int32Container(n) => {
-            parser.consume(Token::Int32Container(n));
-            n
-        }
-        Token::Int16Container(n) => {
-            parser.consume(Token::Int16Container(n));
-            i32::from(n)
-        }
-        Token::Int8Container(n) => {
-            parser.consume(Token::Int8Container(n));
-            i32::from(n)
-        }
+        Token::Int32Container(n) => Token::Int32Container(n),
+        Token::Int16Container(n) => Token::Int16Container(n),
+        Token::Int8Container(n) => Token::Int8Container(n),
+        Token::Identifier(id) => Token::Identifier(id),
         _ => panic!("Expected mode (number)"),
     };
+    parser.consume(mode.clone());
 
     parser.consume(Token::ParentClose);
 
-    AstNode::Open(filename, flags as usize, mode as usize)
+    AstNode::Open(filename, flags, mode)
 }
 
 pub fn parse_sys_sysinfo(parser: &mut Parser) -> AstNode {
@@ -119,11 +105,11 @@ pub fn parse_sys_sysinfo(parser: &mut Parser) -> AstNode {
     parser.consume(Token::ParentOpen);
 
     let buffer = match parser.current_token() {
-        Token::Identifier(id) => id,
+        Token::Identifier(id) => Token::Identifier(id.clone()),
         _ => panic!("Expected buffer identifier"),
     };
 
-    parser.consume(Token::Identifier(buffer.clone()));
+    parser.consume(buffer.clone());
     parser.consume(Token::ParentClose);
 
     AstNode::Sysinfo(buffer)
